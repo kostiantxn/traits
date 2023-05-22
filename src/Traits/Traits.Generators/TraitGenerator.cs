@@ -65,12 +65,14 @@ public class TraitGenerator : IIncrementalGenerator
             /// <inheritdoc cref="{{Cref(type)}}"/>
             {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} static class {{name}}
             {
+            #pragma warning disable CS0649
+            #pragma warning disable TR2001
                 private static class Impl<T>
                 {
-            #pragma warning disable CS0649
                     public static {{type.Name}}<T> Instance;
-            #pragma warning restore CS0649
                 }
+            #pragma warning restore TR2001
+            #pragma warning restore CS0649
 
                 static {{name}}()
                 {

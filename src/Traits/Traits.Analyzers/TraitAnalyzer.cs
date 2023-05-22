@@ -134,6 +134,13 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
     /// </summary>
     private static IEnumerable<ITypeSymbol> Violations(ISymbol parameter, ITypeSymbol argument, ISymbol root)
     {
+        if (SymbolEqualityComparer.Default.Equals(parameter, argument))
+            yield break;
+        if (parameter is IErrorTypeSymbol)
+            yield break;
+        if (argument is IErrorTypeSymbol)
+            yield break;
+
         // Loop through attributes defined for the target type parameter.
         foreach (var attribute in parameter.GetAttributes())
         {

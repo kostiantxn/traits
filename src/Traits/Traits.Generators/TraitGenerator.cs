@@ -28,7 +28,8 @@ public class TraitGenerator : IIncrementalGenerator
     {
         if (type is null)
             return;
-
+        if (!type.IsGenericType)
+            return;
         if (!type.HasAttribute(Types.Traits.TraitAttribute))
             return;
 

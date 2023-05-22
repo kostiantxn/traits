@@ -45,7 +45,7 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
         if (symbol is null)
             return;
 
-        if (!symbol.HasAttribute(Types.Traits.ConstraintAttribute))
+        if (!symbol.HasAttribute(Types.Traits.TraitAttribute))
             return;
 
         if (symbol.Arity < 1)

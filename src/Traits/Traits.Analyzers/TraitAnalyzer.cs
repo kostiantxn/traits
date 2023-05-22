@@ -144,8 +144,8 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
 
             // Get the `ConstraintAttributeAttribute` definition in order to understand
             // which trait this attribute was generated for
-            // (e.g., `[ConstraintAttribute(typeof(IHash<>))]` for `HashAttribute`).
-            var definition = attribute.AttributeClass.GetAttribute(Types.Traits.ConstraintAttributeAttribute);
+            // (e.g., `[For(typeof(IHash<>))]` for `HashAttribute`).
+            var definition = attribute.AttributeClass.GetAttribute(Types.Traits.ForAttribute);
             if (definition is null)
                 continue;
 

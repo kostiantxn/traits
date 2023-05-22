@@ -44,9 +44,9 @@ internal static class Types
             new("Traits", nameof(ConstraintAttribute));
 
         /// <summary>
-        ///     Full type name of the <c>ConstraintAttributeAttribute</c> type.
+        ///     Full type name of the <c>ForAttribute</c> type.
         /// </summary>
-        public static readonly Info ConstraintAttributeAttribute =
-            new("Traits", nameof(ConstraintAttributeAttribute));
+        public static readonly Info ForAttribute =
+            new("Traits", nameof(ForAttribute));
     }
 }

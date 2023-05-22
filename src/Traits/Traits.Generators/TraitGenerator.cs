@@ -6,7 +6,7 @@ using Traits.Generators.Extensions;
 namespace Traits.Generators;
 
 /// <summary>
-    ///     Generates necessary auxiliary types for interfaces marked with the <c>TraitAttribute</c>.
+///     Generates necessary auxiliary types for interfaces marked with the <c>TraitAttribute</c>.
 /// </summary>
 [Generator]
 public class TraitGenerator : IIncrementalGenerator
@@ -51,7 +51,7 @@ public class TraitGenerator : IIncrementalGenerator
     /// </example>
     private static (string File, string Source) Facade(INamedTypeSymbol type, string name)
     {
-        var methods = type.GetMembers().OfType<IMethodSymbol>().Select(Method);
+        var methods = type.GetMembers().OfType<IMethodSymbol>().Select(x => Method(type, x, name));
         var body = string.Join("\n\n", methods);
 
         // TODO: Improve the trait implementation registration mechanism.
@@ -62,6 +62,7 @@ public class TraitGenerator : IIncrementalGenerator
             using System.Reflection;
             using Traits;
 
+            /// <inheritdoc cref="{{Cref(type)}}"/>
             {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} static class {{name}}
             {
                 private static class Impl<T>
@@ -101,13 +102,19 @@ public class TraitGenerator : IIncrementalGenerator
             }
             """);
 
-        string Method(IMethodSymbol method) =>
+        static string Cref(ISymbol symbol) =>
+            symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                .Replace('<', '{')
+                .Replace('>', '}');
+
+        static string Method(INamedTypeSymbol type, IMethodSymbol method, string name) =>
             $"""
+                /// <inheritdoc cref="{Cref(type)}.{Cref(method)}"/>
                 public static {(method.ReturnsVoid ? "void" : method.ReturnType)} {method.Name}<[{name}] {type.TypeArguments.First()}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
                     Impl<{type.TypeArguments.First()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.Name))});
             """;
 
-        string Parameter(IParameterSymbol parameter) =>
+        static string Parameter(IParameterSymbol parameter) =>
             $"{parameter.DeclaringSyntaxReferences[0].GetSyntax()}";
     }
 
@@ -124,7 +131,10 @@ public class TraitGenerator : IIncrementalGenerator
 
             using Traits;
 
-            [ConstraintAttribute(typeof({{type.Name}}<{{new string(',', type.TypeArguments.Length - 1)}}>))]
+            /// <summary>
+            ///     Requires the marked type parameter to implement the <see cref="{{type.ContainingNamespace}}.{{name}}"/> trait.
+            /// </summary>
+            [For(typeof({{type.Name}}<{{new string(',', type.TypeArguments.Length - 1)}}>))]
             {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} class {{name}}Attribute : ConstraintAttribute
             {
             }

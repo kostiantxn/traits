@@ -17,13 +17,12 @@ namespace Traits;
 ///     <para/>
 ///     The following trait constraint attribute will be generated for this trait:
 ///     <code>
-///         [ConstraintAttribute(typeof(IHash&lt;&gt;)]
+///         [For(typeof(IHash&lt;&gt;)]
 ///         class HashAttribute : ConstraintAttribute
 ///         {
 ///         }
 ///     </code>
 /// </example>
-// [AttributeUsage(Parameter | GenericParameter | Field | Property | ReturnValue, AllowMultiple = true)]
 [AttributeUsage(GenericParameter, AllowMultiple = true)]
 public abstract class ConstraintAttribute : Attribute
 {

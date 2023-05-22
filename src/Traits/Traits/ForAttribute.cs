@@ -1,9 +1,9 @@
 ﻿namespace Traits;
 
 [AttributeUsage(AttributeTargets.Class)]
-public class ConstraintAttributeAttribute : Attribute
+public class ForAttribute : Attribute
 {
-    public ConstraintAttributeAttribute(Type type) =>
+    public ForAttribute(Type type) =>
         Type = type;
 
     public Type Type { get; }

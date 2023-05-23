@@ -49,14 +49,10 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             return;
 
         if (symbol.Arity < 1)
-            cx.ReportDiagnostic(
-                Diagnostic.Create(
-                    Diagnostics.Trait.MustHaveAtLeastOneGenericParameter, node.Identifier.GetLocation()));
+            Diagnostics.Trait.MustHaveAtLeastOneGenericParameter.Report(cx, loc: node.Identifier);
 
         if (symbol.AllInterfaces.Length > 0)
-            cx.ReportDiagnostic(
-                Diagnostic.Create(
-                    Diagnostics.Trait.CannotExtendOtherInterfaces, node.BaseList?.GetLocation()));
+            Diagnostics.Trait.CannotExtendOtherInterfaces.Report(cx, loc: node.BaseList!);
     }
 
     /// <summary>
@@ -78,11 +74,10 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
                 var parameter = type.TypeParameters[i];
                 var argument = type.TypeArguments[i];
                 var syntax = name.TypeArgumentList.Arguments[i];
-
+                
                 foreach (var trait in Violations(parameter, argument, cx.Compilation.GlobalNamespace))
-                    cx.ReportDiagnostic(
-                        Diagnostic.Create(
-                            Diagnostics.Constraint.IsNotSatisfied, syntax.GetLocation(), argument, trait, parameter));
+                    Diagnostics.Constraint.IsNotSatisfied
+                        .Report(cx, loc: syntax, argument, trait, parameter);
             }
         }
 
@@ -95,9 +90,8 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
                 var syntax = name.TypeArgumentList.Arguments[i];
 
                 foreach (var trait in Violations(parameter, argument, cx.Compilation.GlobalNamespace))
-                    cx.ReportDiagnostic(
-                        Diagnostic.Create(
-                            Diagnostics.Constraint.IsNotSatisfied, syntax.GetLocation(), argument, trait, parameter));
+                    Diagnostics.Constraint.IsNotSatisfied
+                        .Report(cx, loc: syntax, argument, trait, parameter);
             }
         }
     }
@@ -121,9 +115,8 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             var argument = method.TypeArguments[i];
 
             foreach (var trait in Violations(parameter, argument, cx.Compilation.GlobalNamespace))
-                cx.ReportDiagnostic(
-                    Diagnostic.Create(
-                        Diagnostics.Constraint.IsNotSatisfied, invocation.Expression.GetLocation(), argument, trait, parameter));
+                Diagnostics.Constraint.IsNotSatisfied
+                    .Report(cx, loc: invocation.Expression, argument, trait, parameter);
         }
 
         // TODO: Check inferred delegates.

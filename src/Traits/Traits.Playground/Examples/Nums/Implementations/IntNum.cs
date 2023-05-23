@@ -6,7 +6,7 @@ internal sealed class IntNum : INum<int>
         x + y;
 
     public int Mul(int x, int y) =>
-        x - y;
+        x * y;
 
     public int Neg(int x) =>
         -x;

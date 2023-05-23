@@ -55,6 +55,13 @@ public class TraitGenerator : IIncrementalGenerator
         var methods = type.GetMembers().OfType<IMethodSymbol>().Select(x => Method(type, x, name));
         var body = string.Join("\n\n", methods);
 
+        var self = type.TypeParameters.First();
+        var parameters = type.TypeParameters.Length > 1
+            ? $"<{string.Join(", ", type.TypeParameters.Skip(1))}>"
+            : string.Empty;
+
+        var predicate = string.Join("", type.TypeParameters.Skip(1).Select((x, i) => $" && x.GenericTypeArguments[{i + 1}] == typeof({x.Name})")); 
+
         // TODO: Improve the trait implementation registration mechanism.
         return ($"{name}.g.cs",
             $$"""
@@ -64,13 +71,13 @@ public class TraitGenerator : IIncrementalGenerator
             using Traits;
 
             /// <inheritdoc cref="{{Cref(type)}}"/>
-            {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} static class {{name}}
+            {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} static class {{name}}{{parameters}}
             {
             #pragma warning disable CS0649
             #pragma warning disable TR2001
-                private static class Impl<T>
+                private static class Impl<{{self}}>
                 {
-                    public static {{type.Name}}<T> Instance;
+                    public static {{type.Name}}<{{string.Join(", ", type.TypeArguments)}}> Instance;
                 }
             #pragma warning restore TR2001
             #pragma warning restore CS0649
@@ -84,11 +91,12 @@ public class TraitGenerator : IIncrementalGenerator
 
                     Type Definition(Type type) =>
                         type.GetInterfaces()
-                            .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof({{type.Name}}<>));
+                            .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof({{type.Name}}<{{new string(',', type.TypeParameters.Length - 1)}}>){{predicate}});
 
                     foreach (var trait in traits)
                     {
-                        var impl = typeof(Impl<>).MakeGenericType(trait.Definition!.GenericTypeArguments.First());
+                        var arguments = trait.Definition!.GenericTypeArguments.Skip(1).Append(trait.Definition.GenericTypeArguments.First()).ToArray();
+                        var impl = typeof(Impl<>).MakeGenericType(arguments);
                         var field = impl.GetField(nameof(Impl<object>.Instance));
                         if (field is null)
                             continue;
@@ -110,12 +118,19 @@ public class TraitGenerator : IIncrementalGenerator
                 .Replace('<', '{')
                 .Replace('>', '}');
 
-        static string Method(INamedTypeSymbol type, IMethodSymbol method, string name) =>
-            $"""
-                /// <inheritdoc cref="{Cref(type)}.{Cref(method)}"/>
-                public static {(method.ReturnsVoid ? "void" : method.ReturnType)} {method.Name}<[{name}] {type.TypeArguments.First()}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
-                    Impl<{type.TypeArguments.First()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.Name))});
-            """;
+        static string Method(INamedTypeSymbol type, IMethodSymbol method, string name)
+        {
+            var parameters = type.TypeParameters.Length > 1
+                ? $"({string.Join(", ", type.TypeParameters.Skip(1).Select(x => "nameof(" + x.Name + ")"))})"
+                : string.Empty;
+
+            return 
+                $"""
+                    /// <inheritdoc cref="{Cref(type)}.{Cref(method)}"/>
+                    public static {(method.ReturnsVoid ? "void" : method.ReturnType)} {method.Name}<[{name}{parameters}] {type.TypeArguments.First()}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
+                        Impl<{type.TypeArguments.First()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.Name))});
+                """;
+        }
 
         static string Parameter(IParameterSymbol parameter) =>
             $"{parameter.DeclaringSyntaxReferences[0].GetSyntax()}";
@@ -127,8 +142,9 @@ public class TraitGenerator : IIncrementalGenerator
     /// <example>
     ///     A <c>HashAttribute</c> trait constraint will be generated for the <c>IHash&lt;S&gt;</c> trait.
     /// </example>
-    private static (string File, string Source) Attribute(INamedTypeSymbol type, string name) =>
-        ($"{name}Attribute.g.cs",
+    private static (string File, string Source) Attribute(INamedTypeSymbol type, string name)
+    {
+        var source =
             $$"""
             namespace {{type.ContainingNamespace}};
 
@@ -140,6 +156,33 @@ public class TraitGenerator : IIncrementalGenerator
             [For(typeof({{type.Name}}<{{new string(',', type.TypeArguments.Length - 1)}}>))]
             {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} class {{name}}Attribute : ConstraintAttribute
             {
+                public {{name}}Attribute({{string.Join(", ", type.TypeParameters.Skip(1).Select(x => "string " + CamelCase(x.Name)))}})
+                {
+                }
             }
-            """);
+            """;
+
+        if (type.TypeParameters.Length > 1)
+        {
+            var parameters = $"<{string.Join(", ", type.TypeParameters.Skip(1))}>";
+
+            source +=
+                $$"""
+
+
+                /// <summary>
+                ///     Requires the marked type parameter to implement the <see cref="{{type.ContainingNamespace}}.{{name}}"/> trait.
+                /// </summary>
+                [For(typeof({{type.Name}}<{{new string(',', type.TypeArguments.Length - 1)}}>))]
+                {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} class {{name}}Attribute{{parameters}} : ConstraintAttribute
+                {
+                }
+                """;
+        }
+
+        return ($"{name}Attribute.g.cs", source);
+
+        string CamelCase(string x) =>
+            x.Length > 0 ? char.ToLower(x[0]) + x.Substring(1) : x;
+    }
 }

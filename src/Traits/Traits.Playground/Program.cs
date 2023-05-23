@@ -1,4 +1,5 @@
 ﻿using Traits.Playground.Examples.Defaults;
+using Traits.Playground.Examples.Hashing;
 using Traits.Playground.Examples.Nums;
 using Traits.Playground.Examples.Sets;
 using Traits.Playground.Examples.Sets.Extensions;
@@ -13,6 +14,7 @@ Console.WriteLine(arr.Length);
 Console.WriteLine(Sum(1, 5, 10));
 Console.WriteLine(Sum(1.2, 3.4));
 // Console.WriteLine(Sum("x", "y")); // Won't compile.
+Console.WriteLine(Test<int>());
 
 static T Sum<[Num] T>(params T[] items)
 {
@@ -25,3 +27,6 @@ static T Sum<[Num] T>(params T[] items)
 
     return sum;
 }
+
+static int Test<[Hash, Monoid] T>() =>
+    Hash.Of(Monoid.Zero<T>());

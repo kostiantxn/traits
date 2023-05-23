@@ -1,7 +1,7 @@
 ﻿namespace Traits.Playground.Examples.Hashing.Implementations;
 
-internal sealed class Object : IHash<object>
+internal sealed class DoubleHash : IHash<double>
 {
-    public int Of(object self) =>
+    public int Of(double self) =>
         self.GetHashCode();
 }

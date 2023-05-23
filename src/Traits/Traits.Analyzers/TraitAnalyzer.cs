@@ -135,12 +135,27 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
     /// <summary>
     ///     Gets a list of traits that the specified argument does not satisfy.
     /// </summary>
-    private static IEnumerable<ITypeSymbol> Violations(ISymbol parameter, ITypeSymbol argument, ISymbol root)
+    private static IEnumerable<ITypeSymbol> Violations(ITypeSymbol parameter, ITypeSymbol argument, ISymbol root)
     {
         if (SymbolEqualityComparer.Default.Equals(parameter, argument))
             yield break;
 
-        // Loop through attributes defined for the target type parameter.
+        var constraints = Constraints(parameter);
+        var implementations = Implementations(argument, root);
+
+        constraints.ExceptWith(implementations);
+
+        foreach (var violation in constraints)
+            yield return violation;
+    }
+
+    /// <summary>
+    ///     Returns all traits this parameter requires.
+    /// </summary>
+    private static ISet<ITypeSymbol> Constraints(ITypeSymbol parameter)
+    {
+        var constraints = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+
         foreach (var attribute in parameter.GetAttributes())
         {
             // A trait constraint must inherit the `ConstraintAttribute` class
@@ -148,9 +163,8 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             if (attribute.AttributeClass is null || !attribute.AttributeClass.Inherits(Types.Traits.ConstraintAttribute))
                 continue;
 
-            // Get the `ConstraintAttributeAttribute` definition in order to understand
-            // which trait this attribute was generated for
-            // (e.g., `[For(typeof(IHash<>))]` for `HashAttribute`).
+            // Get the `ForAttribute` definition in order to understand which trait this attribute
+            // was generated for (e.g., `[For(typeof(IHash<>))]` for `HashAttribute`).
             var definition = attribute.AttributeClass.GetAttribute(Types.Traits.ForAttribute);
             if (definition is null)
                 continue;
@@ -160,34 +174,28 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             if (constructor.Value is not ITypeSymbol trait)
                 continue;
 
-            // If the argument is a generic type parameter itself, then we need to
-            // make sure that it also contains the same trait constraints.
-            if (argument.TypeKind == TypeKind.TypeParameter)
-            {
-                if (!Constrained(argument, attribute.AttributeClass))
-                    yield return trait;
-            }
-            else if (!Satisfies(root, argument, trait))
-                yield return trait;
+            constraints.Add(trait.OriginalDefinition);
         }
+
+        return constraints;
     }
 
     /// <summary>
-    ///     Checks whether an argument has the specified attribute.
+    ///     Returns all traits this argument implements.
     /// </summary>
-    private static bool Constrained(ITypeSymbol type, ITypeSymbol attribute) =>
-        type.HasAttribute(attribute);
-
-    /// <summary>
-    ///     Checks whether an argument implements the specified trait.
-    /// </summary>
-    private static bool Satisfies(ISymbol root, ITypeSymbol type, ITypeSymbol trait)
+    private static ISet<ITypeSymbol> Implementations(ITypeSymbol argument, ISymbol root)
     {
-        var visitor = new ImplementationsVisitor(trait);
+        if (argument.TypeKind == TypeKind.TypeParameter)
+        {
+            return Constraints(argument);
+        }
+        else
+        {
+            var visitor = new TraitsVisitor(argument);
 
-        root.Accept(visitor);
+            root.Accept(visitor);
 
-        return visitor.Implementations.Any(x =>
-            SymbolEqualityComparer.Default.Equals(x.AllInterfaces.Single().TypeArguments[0], type));
+            return visitor.Implementations;
+        }
     }
 }

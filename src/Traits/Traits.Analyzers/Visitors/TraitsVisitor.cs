@@ -3,17 +3,17 @@
 namespace Traits.Analyzers.Visitors;
 
 /// <summary>
-///     Searches for all implementations of a specific trait.
+///     Searches for all traits a specific type implements.
 /// </summary>
-internal class ImplementationsVisitor : SymbolVisitor
+internal class TraitsVisitor : SymbolVisitor
 {
-    private readonly ITypeSymbol _trait;
-    private readonly HashSet<INamedTypeSymbol> _implementations = new(SymbolEqualityComparer.Default);
+    private readonly ITypeSymbol _type;
+    private readonly HashSet<ITypeSymbol> _implementations = new(SymbolEqualityComparer.Default);
 
-    public ImplementationsVisitor(ITypeSymbol trait) =>
-        _trait = trait.OriginalDefinition;
+    public TraitsVisitor(ITypeSymbol type) =>
+        _type = type.OriginalDefinition;
 
-    public IReadOnlyCollection<INamedTypeSymbol> Implementations => _implementations;
+    public ISet<ITypeSymbol> Implementations => _implementations;
 
     public override void VisitAssembly(IAssemblySymbol symbol) =>
         symbol.GlobalNamespace.Accept(this);
@@ -42,8 +42,12 @@ internal class ImplementationsVisitor : SymbolVisitor
             return;
 
         var @interface = symbol.AllInterfaces.Single();
+        if (@interface.TypeArguments.Length < 1)
+            return;
 
-        if (SymbolEqualityComparer.Default.Equals(@interface.OriginalDefinition, _trait))
-            _implementations.Add(symbol);
+        var type = @interface.TypeArguments.First();
+
+        if (SymbolEqualityComparer.Default.Equals(type, _type))
+            _implementations.Add(@interface.OriginalDefinition);
     }
 }

@@ -30,6 +30,9 @@ Console.WriteLine(Convert<float, string>("1.5"));
 // Console.WriteLine(Convert<double, string>("1.5")); // Won't compile.
 // Console.WriteLine(Convert<float, int>(1)); // Won't compile.
 
+Console.WriteLine(new Collection<string>("1", "2", "3").To<int>());
+// Console.WriteLine(new Collection<string>("1", "2", "3").To<short>()); // Won't compile.
+
 static T Sum<[Num] T>(params T[] items)
 {
     if (items.Length == 0)
@@ -50,3 +53,20 @@ static T Parse<[From<string>] T>(string text) =>
 
 static T Convert<[From(nameof(U))] T, U>(U input) =>
     From<U>.Into<T>(input);
+
+class Collection<T>
+{
+    private readonly List<T> _items;
+
+    public Collection(params T[] items)
+        : this(items.ToList()) { }
+
+    public Collection(List<T> items) =>
+        _items = items;
+
+    public Collection<U> To<[From(nameof(T))] U>() =>
+        new(_items.Select(x => From<T>.Into<U>(x)).ToList());
+
+    public override string ToString() =>
+        "[" + string.Join(", ", _items) + "]";
+}

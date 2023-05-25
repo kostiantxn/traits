@@ -8,12 +8,12 @@ namespace Traits.Analyzers.Visitors;
 internal class TraitsVisitor : SymbolVisitor
 {
     private readonly ITypeSymbol _type;
-    private readonly HashSet<ITypeSymbol> _implementations = new(SymbolEqualityComparer.Default);
+    private readonly HashSet<INamedTypeSymbol> _implementations = new(SymbolEqualityComparer.Default);
 
     public TraitsVisitor(ITypeSymbol type) =>
-        _type = type.OriginalDefinition;
+        _type = type;
 
-    public ISet<ITypeSymbol> Implementations => _implementations;
+    public ISet<INamedTypeSymbol> Implementations => _implementations;
 
     public override void VisitAssembly(IAssemblySymbol symbol) =>
         symbol.GlobalNamespace.Accept(this);
@@ -48,6 +48,6 @@ internal class TraitsVisitor : SymbolVisitor
         var type = @interface.TypeArguments.First();
 
         if (SymbolEqualityComparer.Default.Equals(type, _type))
-            _implementations.Add(@interface.OriginalDefinition);
+            _implementations.Add(@interface);
     }
 }

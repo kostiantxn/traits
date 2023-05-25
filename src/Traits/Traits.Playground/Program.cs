@@ -13,6 +13,23 @@ Console.WriteLine(def == "");
 Console.WriteLine(sum);
 Console.WriteLine(arr.Length);
 
+Console.WriteLine(Sum(1, 5, 10));
+Console.WriteLine(Sum(1.2, 3.4));
+// Console.WriteLine(Sum("x", "y")); // Won't compile.
+
+Console.WriteLine(Zero<int>());
+// Console.WriteLine(Zero<float>()); // Won't compile.
+
+Console.WriteLine(-Parse<int>("-1984"));
+Console.WriteLine(-Parse<float>("1.2"));
+Console.WriteLine(!Parse<bool>("true"));
+// Console.WriteLine(-Parse<double>("3.4")); // Won't compile.
+
+Console.WriteLine(Convert<int, string>("135"));
+Console.WriteLine(Convert<float, string>("1.5"));
+// Console.WriteLine(Convert<double, string>("1.5")); // Won't compile.
+// Console.WriteLine(Convert<float, int>(1)); // Won't compile.
+
 static T Sum<[Num] T>(params T[] items)
 {
     if (items.Length == 0)
@@ -25,28 +42,11 @@ static T Sum<[Num] T>(params T[] items)
     return sum;
 }
 
-Console.WriteLine(Sum(1, 5, 10));
-Console.WriteLine(Sum(1.2, 3.4));
-// Console.WriteLine(Sum("x", "y")); // Won't compile.
-
-static int Test<[Hash, Monoid] T>() =>
-    Hash.Of(Monoid.Zero<T>());
-
-Console.WriteLine(Test<int>());
-// Console.WriteLine(Test<float>()); // Won't compile.
+static int Zero<[Default, Hash] T>() =>
+    Hash.Of(Default.Of<T>());
 
 static T Parse<[From<string>] T>(string text) =>
     From<string>.Into<T>(text);
 
-Console.WriteLine(-Parse<int>("-1984"));
-Console.WriteLine(-Parse<float>("1.2"));
-Console.WriteLine(!Parse<bool>("true"));
-// Console.WriteLine(-Parse<double>("3.4")); // Won't compile.
-
 static T Convert<[From(nameof(U))] T, U>(U input) =>
     From<U>.Into<T>(input);
-
-Console.WriteLine(Convert<int, string>("135"));
-Console.WriteLine(Convert<float, string>("1.5"));
-// Console.WriteLine(Convert<double, string>("1.5")); // Won't compile.
-// Console.WriteLine(Convert<float, int>(1)); // Won't compile.

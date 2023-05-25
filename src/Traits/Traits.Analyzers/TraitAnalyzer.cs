@@ -69,30 +69,16 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             if (type.IsUnboundGenericType)
                 return;
 
-            for (var i = 0; i < type.TypeArguments.Length; ++i)
-            {
-                var parameter = type.TypeParameters[i];
-                var argument = type.TypeArguments[i];
-                var syntax = name.TypeArgumentList.Arguments[i];
-                
-                foreach (var trait in Violations(parameter, argument, cx.Compilation.GlobalNamespace))
-                    Diagnostics.Constraint.IsNotSatisfied
-                        .Report(cx, loc: syntax, argument, trait, parameter);
-            }
+            foreach (var violation in Violations(type, cx.Compilation))
+                Diagnostics.Constraint.IsNotSatisfied
+                    .Report(cx, loc: name, violation.Argument, violation.Trait, violation.Parameter);
         }
 
         if (info.Symbol is IMethodSymbol method && name.Parent is not InvocationExpressionSyntax)
         {
-            for (var i = 0; i < method.TypeArguments.Length; ++i)
-            {
-                var parameter = method.TypeParameters[i];
-                var argument = method.TypeArguments[i];
-                var syntax = name.TypeArgumentList.Arguments[i];
-
-                foreach (var trait in Violations(parameter, argument, cx.Compilation.GlobalNamespace))
-                    Diagnostics.Constraint.IsNotSatisfied
-                        .Report(cx, loc: syntax, argument, trait, parameter);
-            }
+            foreach (var violation in Violations(method, cx.Compilation))
+                Diagnostics.Constraint.IsNotSatisfied
+                    .Report(cx, loc: name, violation.Argument, violation.Trait, violation.Parameter);
         }
     }
 
@@ -106,48 +92,71 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
         if (method.Arity == 0)
             return;
 
+        if (operation.SemanticModel is null)
+            return;
+
         if (operation.Syntax is not InvocationExpressionSyntax invocation)
             return;
 
-        for (var i = 0; i < method.TypeArguments.Length; ++i)
-        {
-            var parameter = method.TypeParameters[i];
-            var argument = method.TypeArguments[i];
-
-            foreach (var trait in Violations(parameter, argument, cx.Compilation.GlobalNamespace))
-                Diagnostics.Constraint.IsNotSatisfied
-                    .Report(cx, loc: invocation.Expression, argument, trait, parameter);
-        }
+        foreach (var violation in Violations(method, cx.Compilation))
+            Diagnostics.Constraint.IsNotSatisfied
+                .Report(cx, loc: invocation.Expression, violation.Argument, violation.Trait, violation.Parameter);
 
         // TODO: Check inferred delegates.
-        foreach (var argument in operation.Arguments)
+        foreach (var _ in operation.Arguments)
         {
         }
     }
 
-    /// <summary>
-    ///     Gets a list of traits that the specified argument does not satisfy.
-    /// </summary>
-    private static IEnumerable<ITypeSymbol> Violations(ITypeSymbol parameter, ITypeSymbol argument, ISymbol root)
+    private static IEnumerable<(ITypeSymbol Parameter, ITypeSymbol Argument, ITypeSymbol Trait)> Violations(IMethodSymbol method, Compilation compilation) =>
+        Violations(method.TypeParameters, method.TypeArguments, compilation);
+
+    private static IEnumerable<(ITypeSymbol Parameter, ITypeSymbol Argument, ITypeSymbol Trait)> Violations(INamedTypeSymbol type, Compilation compilation) =>
+        Violations(type.TypeParameters, type.TypeArguments, compilation);
+
+    private static IEnumerable<(ITypeSymbol, ITypeSymbol, ITypeSymbol)> Violations(
+        ImmutableArray<ITypeParameterSymbol> parameters,
+        ImmutableArray<ITypeSymbol> arguments,
+        Compilation compilation)
     {
-        if (SymbolEqualityComparer.Default.Equals(parameter, argument))
-            yield break;
+        for (var i = 0; i < parameters.Length; ++i)
+        {
+            var parameter = parameters[i];
+            var argument = arguments[i];
 
-        var constraints = Constraints(parameter);
-        var implementations = Implementations(argument, root);
+            var constraints = Constraints(parameter);
+            if (constraints.Count == 0)
+                continue;
 
-        constraints.ExceptWith(implementations);
+            var implementations = Implementations(argument, compilation);
 
-        foreach (var violation in constraints)
-            yield return violation;
+            foreach (var constraint in constraints)
+            {
+                var trait = Substitute(constraint);
+
+                if (!implementations.Contains(trait, SymbolEqualityComparer.Default))
+                    yield return (parameter, argument, trait);
+            }
+        }
+
+        ITypeSymbol Substitute(INamedTypeSymbol constraint)
+        {
+            var substituted = constraint.TypeArguments.ToArray();
+
+            for (var i = 0; i < constraint.Arity; ++i)
+            for (var j = 0; j < parameters.Length; ++j)
+                substituted[i] = substituted[i].Substitute(parameters[j], arguments[j]);
+
+            return constraint.OriginalDefinition.Construct(substituted);
+        }
     }
 
     /// <summary>
     ///     Returns all traits this parameter requires.
     /// </summary>
-    private static ISet<ITypeSymbol> Constraints(ITypeSymbol parameter)
+    private static ISet<INamedTypeSymbol> Constraints(ITypeSymbol parameter)
     {
-        var constraints = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        var constraints = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
         foreach (var attribute in parameter.GetAttributes())
         {
@@ -158,35 +167,73 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
 
             // Get the `ForAttribute` definition in order to understand which trait this attribute
             // was generated for (e.g., `[For(typeof(IHash<>))]` for `HashAttribute`).
-            var definition = attribute.AttributeClass.GetAttribute(Types.Traits.ForAttribute);
-            if (definition is null)
+            var @for = attribute.AttributeClass.GetAttribute(Types.Traits.ForAttribute);
+            if (@for is null)
                 continue;
 
             // Get the trait this attribute was generated for (e.g., `IHash<>`).
-            var constructor = definition.ConstructorArguments.FirstOrDefault();
-            if (constructor.Value is not ITypeSymbol trait)
+            var type = @for.ConstructorArguments.FirstOrDefault();
+            if (type.Value is not INamedTypeSymbol { IsGenericType: true } trait)
                 continue;
 
-            constraints.Add(trait.OriginalDefinition);
+            // Substitute the generics specified as type arguments for the attribute
+            // (e.g., `IFrom<S, T>` -> `IFrom<S, string>` for `From<string>`).
+            trait = trait.OriginalDefinition;
+
+            var arguments = new List<ITypeSymbol> { parameter };
+
+            if (attribute.ConstructorArguments.Length > 0)
+            {
+                foreach (var argument in attribute.ConstructorArguments)
+                {
+                    if (argument.Value is not string name)
+                        continue;
+
+                    var referenced = Referenced(parameter.ContainingSymbol, name);
+                    if (referenced is not null)
+                        arguments.Add(referenced);
+                }
+            }
+            else if (attribute.AttributeClass.IsGenericType)
+                arguments.AddRange(attribute.AttributeClass.TypeArguments);
+
+            constraints.Add(trait.Construct(arguments.ToArray()));
         }
 
         return constraints;
+
+        static ITypeSymbol? Referenced(ISymbol symbol, string name)
+        {
+            if (symbol is IMethodSymbol method)
+            {
+                var index = method.TypeParameters.IndexOf(x => x.Name == name);
+                if (index >= 0)
+                    return method.TypeArguments[index];
+            }
+
+            if (symbol is INamedTypeSymbol type)
+            {
+                var index = type.TypeParameters.IndexOf(x => x.Name == name);
+                if (index >= 0)
+                    return type.TypeArguments[index];
+            }
+
+            return symbol is not INamespaceSymbol ? Referenced(symbol.ContainingSymbol, name) : null;
+        }
     }
 
     /// <summary>
     ///     Returns all traits this argument implements.
     /// </summary>
-    private static ISet<ITypeSymbol> Implementations(ITypeSymbol argument, ISymbol root)
+    private static ISet<INamedTypeSymbol> Implementations(ITypeSymbol argument, Compilation compilation)
     {
         if (argument.TypeKind == TypeKind.TypeParameter)
-        {
             return Constraints(argument);
-        }
         else
         {
             var visitor = new TraitsVisitor(argument);
 
-            root.Accept(visitor);
+            compilation.GlobalNamespace.Accept(visitor);
 
             return visitor.Implementations;
         }

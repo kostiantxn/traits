@@ -1,6 +1,4 @@
-﻿using System.Net;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Diagnostics;
+﻿using Microsoft.CodeAnalysis;
 
 namespace Traits.Analyzers;
 

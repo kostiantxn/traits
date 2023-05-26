@@ -2,6 +2,9 @@
 
 namespace Traits.Analyzers.Extensions;
 
+/// <summary>
+///     Extensions for <see cref="IEnumerable{T}"/>.
+/// </summary>
 internal static class EnumerableExtensions
 {
     public static int IndexOf<T>(this ImmutableArray<T> self, Func<T, bool> predicate)

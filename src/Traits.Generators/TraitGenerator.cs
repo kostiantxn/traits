@@ -136,17 +136,18 @@ public class TraitGenerator : IIncrementalGenerator
 
         static string Method(INamedTypeSymbol type, IMethodSymbol method, string name)
         {
-            if (!type.ContainingNamespace.IsGlobalNamespace)
-                name = "global::" + type.ContainingNamespace + "." + name + "Attribute";
+            var attribute = name + "Attribute";
 
-            var parameters = type.TypeParameters.Length > 1
-                ? $"({string.Join(", ", type.TypeParameters.Skip(1).Select(x => "nameof(" + x.Name + ")"))})"
-                : string.Empty;
+            if (!type.ContainingNamespace.IsGlobalNamespace)
+                attribute = "global::" + type.ContainingNamespace + "." + attribute;
+
+            if (type.TypeParameters.Length > 1)
+                attribute = attribute + "(" + string.Join(", ", type.TypeParameters.Skip(1).Select(x => "nameof(" + x.Name + ")")) + ")";
 
             return 
                 $"""
                     /// <inheritdoc cref="{Escape(FullName(type))}.{Escape(FullName(method))}"/>
-                    public static {method.ReturnType} {method.Name}<[{name}{parameters}] {type.TypeArguments.First()}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
+                    public static {method.ReturnType} {method.Name}<[{attribute}] {type.TypeArguments.First()}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
                         Impl<{FullName(type.TypeArguments.First())}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.Name))});
                 """;
         }
@@ -178,8 +179,8 @@ public class TraitGenerator : IIncrementalGenerator
             /// <summary>
             ///     Requires the marked type parameter to implement the <see cref="{{Escape(FullName(type))}}"/> trait.
             /// </summary>
-            [Traits.For(typeof({{FullName(type.ConstructUnboundGenericType())}}))]
-            {{accessibility}} class {{name}}Attribute : Traits.ConstraintAttribute
+            [global::Traits.ForAttribute(typeof({{FullName(type.ConstructUnboundGenericType())}}))]
+            {{accessibility}} class {{name}}Attribute : global::Traits.ConstraintAttribute
             {
                 public {{name}}Attribute({{parameters}})
                 {
@@ -198,8 +199,8 @@ public class TraitGenerator : IIncrementalGenerator
                     /// <summary>
                     ///     Requires the marked type parameter to implement the <see cref="{{Escape(FullName(type))}}"/> trait.
                     /// </summary>
-                    [Traits.For(typeof({{FullName(type.ConstructUnboundGenericType())}}))]
-                    {{accessibility}} class {{name}}Attribute<{{generics}}> : Traits.ConstraintAttribute
+                    [global::Traits.ForAttribute(typeof({{FullName(type.ConstructUnboundGenericType())}}))]
+                    {{accessibility}} class {{name}}Attribute<{{generics}}> : global::Traits.ConstraintAttribute
                     {
                     }
                     """);

@@ -16,13 +16,16 @@ namespace Traits.Analyzers;
 public sealed class TraitAnalyzer : DiagnosticAnalyzer
 {
     /// <inheritdoc/>
-    /// <remarks>
-    ///     TODO: Support other diagnostics.
-    /// </remarks>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(
             Diagnostics.Trait.MustHaveAtLeastOneGenericParameter,
-            Diagnostics.Trait.CannotExtendOtherInterfaces,
+            Diagnostics.Trait.ShouldNotExtendOtherInterfaces,
+            Diagnostics.Implementation.MustBeSealed,
+            Diagnostics.Implementation.MustNotImplementOtherInterfaces,
+            Diagnostics.Implementation.MustContainParameterlessConstructor,
+            Diagnostics.Implementation.MustBeAsVisibleAsTrait,
+            Diagnostics.Implementation.MustNotBeNested,
+            Diagnostics.Implementation.Conflict,
             Diagnostics.Constraint.IsNotSatisfied);
 
     /// <inheritdoc/>
@@ -32,6 +35,7 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
 
         context.RegisterSyntaxNodeAction(x => Analyze(x, (InterfaceDeclarationSyntax) x.Node), SyntaxKind.InterfaceDeclaration);
+        context.RegisterSyntaxNodeAction(x => Analyze(x, (TypeDeclarationSyntax) x.Node), SyntaxKind.ClassDeclaration);
         context.RegisterSyntaxNodeAction(x => Analyze(x, (GenericNameSyntax) x.Node), SyntaxKind.GenericName);
         context.RegisterOperationAction(x => Analyze(x, (IInvocationOperation) x.Operation), OperationKind.Invocation);
     }
@@ -49,10 +53,55 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             return;
 
         if (symbol.Arity < 1)
-            Diagnostics.Trait.MustHaveAtLeastOneGenericParameter.Report(cx, loc: node.Identifier);
+            Diagnostics.Trait.MustHaveAtLeastOneGenericParameter
+                .Report(cx, loc: node.Identifier);
 
         if (symbol.AllInterfaces.Length > 0)
-            Diagnostics.Trait.CannotExtendOtherInterfaces.Report(cx, loc: node.BaseList!);
+            Diagnostics.Trait.ShouldNotExtendOtherInterfaces
+                .Report(cx, loc: node.BaseList!);
+    }
+
+    /// <summary>
+    ///     Analyzes class declarations to ensure that trait implementations are correct.
+    /// </summary>
+    private static void Analyze(SyntaxNodeAnalysisContext cx, TypeDeclarationSyntax node)
+    {
+        var impl = cx.SemanticModel.GetDeclaredSymbol(node);
+        if (impl is null)
+            return;
+
+        var trait = impl.AllInterfaces.FirstOrDefault(x => x.HasAttribute(Types.Traits.TraitAttribute));
+        if (trait is null)
+            return;
+
+        if (!impl.IsSealed)
+            Diagnostics.Implementation.MustBeSealed
+                .Report(cx, loc: node.Identifier);
+
+        if (impl.AllInterfaces.Length > 1)
+            Diagnostics.Implementation.MustNotImplementOtherInterfaces
+                .Report(cx, loc: node.Identifier);
+
+        if (impl.DeclaredAccessibility != trait.DeclaredAccessibility)
+            Diagnostics.Implementation.MustBeAsVisibleAsTrait
+                .Report(cx, loc: node.Identifier);
+
+        if (impl.InstanceConstructors.Length > 0 &&
+            impl.InstanceConstructors.All(x => x.Parameters.Length > 0))
+            Diagnostics.Implementation.MustContainParameterlessConstructor
+                .Report(cx, loc: node.Identifier);
+
+        if (impl.ContainingSymbol is ITypeSymbol)
+            Diagnostics.Implementation.MustNotBeNested
+                .Report(cx, loc: node.Identifier);
+
+        var visitor = new ConflictsVisitor(impl);
+
+        cx.Compilation.GlobalNamespace.Accept(visitor);
+
+        if (visitor.Conflicts.Count > 0)
+            Diagnostics.Implementation.Conflict
+                .Report(cx, loc: node.Identifier, trait);
     }
 
     /// <summary>

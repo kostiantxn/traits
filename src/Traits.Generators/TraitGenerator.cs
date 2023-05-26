@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Text;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Traits.Generators.Extensions;
@@ -15,7 +16,7 @@ public class TraitGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var provider = context.SyntaxProvider.CreateSyntaxProvider(
-            (x, _) => x is InterfaceDeclarationSyntax type && type.HasAttribute(Types.Traits.TraitAttribute.Short),
+            (x, _) => x is InterfaceDeclarationSyntax,
             (x, _) => x.SemanticModel.GetDeclaredSymbol(x.Node) as INamedTypeSymbol);
 
         context.RegisterSourceOutput(provider, Run);
@@ -28,8 +29,12 @@ public class TraitGenerator : IIncrementalGenerator
     {
         if (type is null)
             return;
+
+        // Trait interfaces must contain at least one generic parameter.
         if (!type.IsGenericType)
             return;
+
+        // Traits must be marked with the `TraitAttribute`.
         if (!type.HasAttribute(Types.Traits.TraitAttribute))
             return;
 
@@ -52,60 +57,74 @@ public class TraitGenerator : IIncrementalGenerator
     /// </example>
     private static (string File, string Source) Facade(INamedTypeSymbol type, string name)
     {
-        var methods = type.GetMembers().OfType<IMethodSymbol>().Select(x => Method(type, x, name));
+        var accessibility = SyntaxFacts.GetText(type.DeclaredAccessibility);
+
+        var methods = type.GetMembers().OfType<IMethodSymbol>()
+            .Where(x => x.DeclaredAccessibility == Accessibility.Public)
+            .Where(x => !x.IsStatic)
+            .Select(x => Method(type, x, name));
         var body = string.Join("\n\n", methods);
 
         var self = type.TypeParameters.First();
         var parameters = type.TypeParameters.Length > 1
-            ? $"<{string.Join(", ", type.TypeParameters.Skip(1))}>"
+            ? $"<{string.Join(", ", type.TypeParameters.Skip(1).Select(Generic))}>"
             : string.Empty;
 
-        var predicate = string.Join("", type.TypeParameters.Skip(1).Select((x, i) => $" && x.GenericTypeArguments[{i + 1}] == typeof({x.Name})")); 
+        var predicate = string.Join(
+            string.Empty,
+            type.TypeParameters.Skip(1).Select((x, i) => $".Where(x => x.GenericTypeArguments[{i + 1}] == typeof({x.Name}))\n                "));
 
-        // TODO: Improve the trait implementation registration mechanism.
-        return ($"{name}.g.cs",
+        var source = new StringBuilder();
+
+        if (!type.ContainingNamespace.IsGlobalNamespace)
+            source
+                .AppendLine($"namespace {type.ContainingNamespace};")
+                .AppendLine();
+
+        source.AppendLine(
             $$"""
-            namespace {{type.ContainingNamespace}};
+            using System.Linq;
 
-            using System.Reflection;
-            using Traits;
-
-            /// <inheritdoc cref="{{Cref(type)}}"/>
-            {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} static class {{name}}{{parameters}}
+            /// <inheritdoc cref="{{Escape(FullName(type))}}"/>
+            {{accessibility}} static class {{name}}{{parameters}}
             {
             #pragma warning disable CS0649
             #pragma warning disable TR2001
                 private static class Impl<{{self}}>
                 {
-                    public static {{type.Name}}<{{string.Join(", ", type.TypeArguments)}}> Instance;
+                    public static {{FullName(type)}} Instance;
                 }
             #pragma warning restore TR2001
             #pragma warning restore CS0649
 
                 static {{name}}()
                 {
-                    var traits = AppDomain.CurrentDomain.GetAssemblies()
+                    var traits = global::System.AppDomain.CurrentDomain.GetAssemblies()
                         .SelectMany(x => x.GetTypes())
                         .Select(x => (Impl: x, Definition: Definition(x)))
                         .Where(x => x.Definition is not null);
 
-                    Type Definition(Type type) =>
+                    global::System.Type Definition(global::System.Type type) =>
                         type.GetInterfaces()
-                            .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof({{type.Name}}<{{new string(',', type.TypeParameters.Length - 1)}}>){{predicate}});
+                            .Where(x => x.IsGenericType)
+                            .Where(x => x.GetGenericTypeDefinition() == typeof({{FullName(type.ConstructUnboundGenericType())}}))
+                            {{predicate}}.FirstOrDefault();
 
                     foreach (var trait in traits)
                     {
-                        var arguments = trait.Definition!.GenericTypeArguments.Skip(1).Append(trait.Definition.GenericTypeArguments.First()).ToArray();
+                        var self = trait.Definition.GenericTypeArguments.First();
+                        var arguments = trait.Definition.GenericTypeArguments.Skip(1).Append(self).ToArray();
                         var impl = typeof(Impl<>).MakeGenericType(arguments);
-                        var field = impl.GetField(nameof(Impl<object>.Instance));
-                        if (field is null)
+
+                        var instance = impl.GetField(nameof(Impl<object>.Instance));
+                        if (instance is null)
                             continue;
 
-                        var ctor = trait.Impl.GetConstructor(Type.EmptyTypes);
+                        var ctor = trait.Impl.GetConstructor(global::System.Type.EmptyTypes);
                         if (ctor is null)
                             continue;
 
-                        field.SetValue(null, ctor.Invoke(null));
+                        instance.SetValue(null, ctor.Invoke(null));
                     }
                 }
 
@@ -113,27 +132,27 @@ public class TraitGenerator : IIncrementalGenerator
             }
             """);
 
-        static string Cref(ISymbol symbol) =>
-            symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-                .Replace('<', '{')
-                .Replace('>', '}');
+        return ($"{name}.g.cs", source.ToString());
 
         static string Method(INamedTypeSymbol type, IMethodSymbol method, string name)
         {
+            if (!type.ContainingNamespace.IsGlobalNamespace)
+                name = "global::" + type.ContainingNamespace + "." + name + "Attribute";
+
             var parameters = type.TypeParameters.Length > 1
                 ? $"({string.Join(", ", type.TypeParameters.Skip(1).Select(x => "nameof(" + x.Name + ")"))})"
                 : string.Empty;
 
             return 
                 $"""
-                    /// <inheritdoc cref="{Cref(type)}.{Cref(method)}"/>
-                    public static {(method.ReturnsVoid ? "void" : method.ReturnType)} {method.Name}<[{name}{parameters}] {type.TypeArguments.First()}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
-                        Impl<{type.TypeArguments.First()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.Name))});
+                    /// <inheritdoc cref="{Escape(FullName(type))}.{Escape(FullName(method))}"/>
+                    public static {method.ReturnType} {method.Name}<[{name}{parameters}] {type.TypeArguments.First()}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
+                        Impl<{FullName(type.TypeArguments.First())}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.Name))});
                 """;
         }
 
         static string Parameter(IParameterSymbol parameter) =>
-            $"{parameter.DeclaringSyntaxReferences[0].GetSyntax()}";
+            parameter.DeclaringSyntaxReferences[0].GetSyntax().ToString();
     }
 
     /// <summary>
@@ -144,45 +163,66 @@ public class TraitGenerator : IIncrementalGenerator
     /// </example>
     private static (string File, string Source) Attribute(INamedTypeSymbol type, string name)
     {
-        var source =
+        var source = new StringBuilder();
+
+        if (!type.ContainingNamespace.IsGlobalNamespace)
+            source
+                .AppendLine($"namespace {type.ContainingNamespace};")
+                .AppendLine();
+
+        var accessibility = SyntaxFacts.GetText(type.DeclaredAccessibility);
+        var parameters = string.Join(", ", type.TypeParameters.Skip(1).Select(x => "string " + CamelCase(x.Name)));
+
+        source.AppendLine(
             $$"""
-            namespace {{type.ContainingNamespace}};
-
-            using Traits;
-
             /// <summary>
-            ///     Requires the marked type parameter to implement the <see cref="{{type.ContainingNamespace}}.{{name}}"/> trait.
+            ///     Requires the marked type parameter to implement the <see cref="{{Escape(FullName(type))}}"/> trait.
             /// </summary>
-            [For(typeof({{type.Name}}<{{new string(',', type.TypeArguments.Length - 1)}}>))]
-            {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} class {{name}}Attribute : ConstraintAttribute
+            [Traits.For(typeof({{FullName(type.ConstructUnboundGenericType())}}))]
+            {{accessibility}} class {{name}}Attribute : Traits.ConstraintAttribute
             {
-                public {{name}}Attribute({{string.Join(", ", type.TypeParameters.Skip(1).Select(x => "string " + CamelCase(x.Name)))}})
+                public {{name}}Attribute({{parameters}})
                 {
                 }
             }
-            """;
+            """);
 
         if (type.TypeParameters.Length > 1)
         {
-            var parameters = $"<{string.Join(", ", type.TypeParameters.Skip(1))}>";
+            var generics = string.Join(", ", type.TypeParameters.Skip(1).Select(Generic));
 
-            source +=
-                $$"""
-
-
-                /// <summary>
-                ///     Requires the marked type parameter to implement the <see cref="{{type.ContainingNamespace}}.{{name}}"/> trait.
-                /// </summary>
-                [For(typeof({{type.Name}}<{{new string(',', type.TypeArguments.Length - 1)}}>))]
-                {{SyntaxFacts.GetText(type.DeclaredAccessibility)}} class {{name}}Attribute{{parameters}} : ConstraintAttribute
-                {
-                }
-                """;
+            source
+                .AppendLine()
+                .AppendLine(
+                    $$"""
+                    /// <summary>
+                    ///     Requires the marked type parameter to implement the <see cref="{{Escape(FullName(type))}}"/> trait.
+                    /// </summary>
+                    [Traits.For(typeof({{FullName(type.ConstructUnboundGenericType())}}))]
+                    {{accessibility}} class {{name}}Attribute<{{generics}}> : Traits.ConstraintAttribute
+                    {
+                    }
+                    """);
         }
 
-        return ($"{name}Attribute.g.cs", source);
-
-        string CamelCase(string x) =>
-            x.Length > 0 ? char.ToLower(x[0]) + x.Substring(1) : x;
+        return ($"{name}Attribute.g.cs", source.ToString());
     }
+
+    private static string FullName(ISymbol symbol) =>
+        symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+    private static string Generic(ITypeParameterSymbol parameter)
+    {
+        var attributes = parameter.GetAttributes();
+        if (attributes.Length > 0)
+            return "[" + string.Join(", ", parameter.GetAttributes()) + "] " + parameter;
+        else
+            return parameter.ToString();
+    }
+
+    private static string Escape(string x) =>
+        x.Replace('<', '{').Replace('>', '}');
+
+    private static string CamelCase(string x) =>
+        x.Length > 0 ? char.ToLower(x[0]) + x.Substring(1) : x;
 }

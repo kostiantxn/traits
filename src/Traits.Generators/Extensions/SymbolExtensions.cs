@@ -5,7 +5,7 @@ namespace Traits.Generators.Extensions;
 /// <summary>
 ///     Extensions for symbols.
 /// </summary>
-public static class SymbolExtensions
+internal static class SymbolExtensions
 {
     public static AttributeData? GetAttribute(this ITypeSymbol self, string name) =>
         self.GetAttributes().FirstOrDefault(x => x.AttributeClass?.ToString() == name);

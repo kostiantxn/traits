@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Samples", "Traits.Samples\Traits.Samples.csproj", "{FD48860D-CE81-4686-9769-FF20E8D65A9F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Common", "..\src\Traits.Common\Traits.Common.csproj", "{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FD48860D-CE81-4686-9769-FF20E8D65A9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD48860D-CE81-4686-9769-FF20E8D65A9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD48860D-CE81-4686-9769-FF20E8D65A9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD48860D-CE81-4686-9769-FF20E8D65A9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

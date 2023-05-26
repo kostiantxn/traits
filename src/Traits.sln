@@ -8,8 +8,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Generators", "Traits
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Analyzers", "Traits.Analyzers\Traits.Analyzers.csproj", "{B40F6326-7836-44EC-8F03-FE653E7DD406}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Laboratory", "Traits.Laboratory\Traits.Laboratory.csproj", "{A491043D-15C3-4A63-A433-40C5787F80E9}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,9 +30,5 @@ Global
 		{B40F6326-7836-44EC-8F03-FE653E7DD406}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B40F6326-7836-44EC-8F03-FE653E7DD406}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B40F6326-7836-44EC-8F03-FE653E7DD406}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A491043D-15C3-4A63-A433-40C5787F80E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A491043D-15C3-4A63-A433-40C5787F80E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A491043D-15C3-4A63-A433-40C5787F80E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A491043D-15C3-4A63-A433-40C5787F80E9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

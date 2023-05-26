@@ -1,5 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Diagnostics.CodeAnalysis;
+using Traits;
 using Traits.Common.Conversion;
 using Traits.Common.Defaults;
 using Traits.Common.Hashing;
@@ -71,4 +73,10 @@ class Collection<T>
 
     public override string ToString() =>
         "[" + string.Join(", ", _items) + "]";
+}
+
+[Trait]
+interface IDisplay<S>
+{
+    void Print([NotNull] S self);
 }

@@ -238,6 +238,8 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
                     if (argument.Value is not string name)
                         continue;
 
+                    // TODO: Report a diagnostic if the referenced type cannot be found.
+                    // TODO: Resolve the type from a semantic model if it references a concrete type.
                     var referenced = Referenced(parameter.ContainingSymbol, name);
                     if (referenced is not null)
                         arguments.Add(referenced);
@@ -246,6 +248,7 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             else if (attribute.AttributeClass.IsGenericType)
                 arguments.AddRange(attribute.AttributeClass.TypeArguments);
 
+            // TODO: Search for transitive constraints (e.g., `Monoid` implies `Semigroup`).
             constraints.Add(trait.Construct(arguments.ToArray()));
         }
 

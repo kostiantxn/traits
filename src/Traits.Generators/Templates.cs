@@ -132,7 +132,7 @@ internal static class Templates
             // TODO: Include generics from the original method (and not only the `self` parameter).
             // TODO: Include other `self` type parameter attributes.
             // TODO: Include `self` type parameter constraints.
-            return 
+            return
                 $"""
                     /// <inheritdoc cref="{Escape(type.ToFullDisplayString())}.{Escape(method.ToFullDisplayString())}"/>
                     public static {method.ReturnType} {method.Name}<[{attribute}] {self}>({string.Join(", ", method.Parameters.Select(x => x.ToParameterString()))}) =>

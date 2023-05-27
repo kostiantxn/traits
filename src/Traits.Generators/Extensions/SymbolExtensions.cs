@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Text;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace Traits.Generators.Extensions;
@@ -17,34 +18,38 @@ internal static class SymbolExtensions
     public static string ToFullDisplayString(this ISymbol self) =>
         self.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-    public static string ToStringWithAttributes(this ISymbol self)
-    {
-        var attributes = self.GetAttributes();
-        if (attributes.Length > 0)
-            return "[" + string.Join(", ", attributes) + "] " + self;
-        else
-            return self.ToString();
-    }
+    public static string ToStringWithAttributes(this ISymbol self) =>
+        self.ToAttributesString() + self;
 
     public static string ToParameterString(this IParameterSymbol self)
     {
-        var text = self.RefKind.ToDisplayString() + self.Type.ToFullDisplayString() + " " + self.Name;
+        var text = new StringBuilder();
 
-        var attributes = self.GetAttributes();
-        if (attributes.Length > 0)
-            text = $"[{string.Join(", ", attributes)}] " + text;
-
-        if (self.IsParams)
-            text = "params " + text;
+        text.Append(self.ToAttributesString())
+            .Append(self.IsParams ? "params " : string.Empty)
+            .Append(self.RefKind.ToDisplayString())
+            .Append(self.Type.ToFullDisplayString())
+            .Append(' ')
+            .Append(self.Name);
 
         if (self.HasExplicitDefaultValue)
-            text += " = " + self.ExplicitDefaultValue.ToReprString(self.Type);
+            text.Append(" = ")
+                .Append(self.ExplicitDefaultValue.ToReprString(self.Type));
 
-        return text;
+        return text.ToString();
     }
 
     public static string ToArgumentString(this IParameterSymbol self) =>
         self.RefKind.ToDisplayString() + self.Name;
+
+    private static string ToAttributesString(this ISymbol self)
+    {
+        var attributes = self.GetAttributes();
+        if (attributes.Length > 0)
+            return "[" + string.Join(", ", attributes) + "] ";
+
+        return string.Empty;
+    }
 
     private static string ToDisplayString(this RefKind kind) =>
         kind switch

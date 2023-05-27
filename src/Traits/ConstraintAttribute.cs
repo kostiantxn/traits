@@ -1,29 +1,13 @@
-﻿using static System.AttributeTargets;
-
-namespace Traits;
+﻿namespace Traits;
 
 /// <summary>
-///     Inherited by concrete trait constraint attributes.
+///     Inherited by generated trait constraint attributes.
 /// </summary>
-/// <example>
-///     Consider a simple trait:
-///     <code>
-///         [Trait]
-///         interface IHash&lt;T&gt;
-///         {
-///             int Of(T value);
-///         }
-///     </code>
-///     <para/>
-///     The following trait constraint attribute will be generated for this trait:
-///     <code>
-///         [For(typeof(IHash&lt;&gt;)]
-///         class HashAttribute : ConstraintAttribute
-///         {
-///         }
-///     </code>
-/// </example>
-[AttributeUsage(GenericParameter, AllowMultiple = true)]
+/// <remarks>
+///     Used by the <c>TraitGenerator</c>.
+/// </remarks>
+/// <seealso cref="TraitAttribute"/>
+[AttributeUsage(AttributeTargets.GenericParameter, AllowMultiple = true)]
 public abstract class ConstraintAttribute : Attribute
 {
 }

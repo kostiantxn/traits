@@ -58,6 +58,7 @@ internal static class Templates
             using System.Linq;
 
             /// <inheritdoc cref="{{Escape(type.ToFullDisplayString())}}"/>
+            [global::Traits.ForAttribute(typeof({{type.ConstructUnboundGenericType().ToFullDisplayString()}}))]
             {{accessibility}} static class {{name}}{{generics}}
             {
             #pragma warning disable CS0649

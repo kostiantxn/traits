@@ -9,7 +9,7 @@
 /// <example>
 ///     <code>
 ///         [For(typeof(IHash&lt;&gt;))]
-///         public class HashAttribute : ConstraintAttribute
+///         class HashAttribute : ConstraintAttribute
 ///         {
 ///         }
 ///     </code>

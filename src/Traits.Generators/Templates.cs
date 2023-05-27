@@ -128,12 +128,15 @@ internal static class Templates
             if (type.TypeParameters.Length > 1)
                 attribute = attribute + "(" + string.Join(", ", type.TypeParameters.Skip(1).Select(x => "nameof(" + x.Name + ")")) + ")";
 
+            // TODO: Include attributes from the original methods.
             // TODO: Include generics from the original method (and not only the `self` parameter).
+            // TODO: Include other `self` type parameter attributes.
+            // TODO: Include `self` type parameter constraints.
             return 
                 $"""
                     /// <inheritdoc cref="{Escape(type.ToFullDisplayString())}.{Escape(method.ToFullDisplayString())}"/>
-                    public static {method.ReturnType} {method.Name}<[{attribute}] {self}>({string.Join(", ", method.Parameters.Select(Parameter))}) =>
-                        Impl<{self.ToFullDisplayString()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.Name))});
+                    public static {method.ReturnType} {method.Name}<[{attribute}] {self}>({string.Join(", ", method.Parameters.Select(x => x.ToParameterString()))}) =>
+                        Impl<{self.ToFullDisplayString()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.ToArgumentString()))});
                 """;
         }
 
@@ -142,10 +145,6 @@ internal static class Templates
                 string.Empty,
                 type.TypeParameters.Skip(1).Select((x, i) => 
                     $".Where(x => x.GenericTypeArguments[{i + 1}] == typeof({x.Name}))\n" + new string(' ', tab)));
-
-        // TODO: Include parameter attributes.
-        static string Parameter(IParameterSymbol parameter) =>
-            parameter.Type.ToFullDisplayString() + " " + parameter.Name;
     }
 
     /// <summary>

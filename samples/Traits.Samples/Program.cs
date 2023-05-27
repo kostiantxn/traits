@@ -78,5 +78,13 @@ class Collection<T>
 [Trait]
 interface IDisplay<S>
 {
-    void Print([NotNull] S self);
+    void Print([NotNull] S self, ref string error, in Style style = Style.Bold | Style.Italic);
+}
+
+[Flags]
+enum Style
+{
+    Bold = 1 << 0,
+    Italic = 1 << 1,
+    Underline = 1 << 2,
 }

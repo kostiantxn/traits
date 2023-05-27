@@ -2,6 +2,13 @@
 
 Roslyn-powered traits implementation for C#.
 
+## Definition
+
+According to Wikipedia,
+> a [trait](https://en.wikipedia.org/wiki/Trait_(computer_programming)) is a concept used in programming languages which represents a set of methods that can be used to extend the functionality of a class.
+
+Traits are very similar to interfaces; however, unlike interfaces, traits can be implemented for existing types that you do not control.
+
 ## Usage
 
 ### Defining a Trait

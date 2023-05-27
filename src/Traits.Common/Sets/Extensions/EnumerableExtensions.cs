@@ -6,7 +6,7 @@
 public static class EnumerableExtensions
 {
     /// <summary>
-    ///     Applies the function defined by the <see cref="Semigroup"/> trait to values
+    ///     Applies the function defined by the <see cref="ISemigroup{S}"/> trait to values
     ///     in the enumerable, folding them into a single value.
     /// </summary>
     /// <param name="self">The enumerable to fold.</param>

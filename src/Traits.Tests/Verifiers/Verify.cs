@@ -8,7 +8,10 @@ namespace Traits.Tests.Verifiers;
 
 internal static class Verify
 {
-    public static Task Source(string source, params DiagnosticResult[] diagnostics)
+    /// <summary>
+    ///     Runs the <see cref="TraitAnalyzer"/> and verifies reported diagnostics.
+    /// </summary>
+    public static Task Traits(string source, params DiagnosticResult[] diagnostics)
     {
         var test = new CSharpAnalyzerTest<TraitAnalyzer, XUnitVerifier>
         {

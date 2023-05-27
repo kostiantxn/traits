@@ -5,7 +5,7 @@ namespace Traits.Analyzers;
 /// <summary>
 ///     A collection of diagnostics that <see cref="TraitAnalyzer"/> emits.
 /// </summary>
-internal static class Diagnostics
+public static class Diagnostics
 {
     /// <summary>
     ///     Diagnostics related to trait definitions.

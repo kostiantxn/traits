@@ -58,6 +58,12 @@ static T Parse<[From<string>] T>(string text) =>
 static T Convert<[From(nameof(U))] T, U>(U input) =>
     From<U>.Into<T>(input);
 
+static T Simple<[Monoid] T>() =>
+    Semigroup.Dot(Monoid.Zero<T>(), Monoid.Zero<T>());
+
+static Y Complex<[Display(nameof(Y))] X, Y>(X x) =>
+    Into<Y>.From(x);
+
 class Collection<T>
 {
     private readonly List<T> _items;
@@ -76,7 +82,7 @@ class Collection<T>
 }
 
 [Trait]
-interface IDisplay<S>
+interface IDisplay<[Into(nameof(P))] S, P>
 {
     void Print([NotNull] S self, ref string error, in Style style = Style.Bold | Style.Italic);
 }

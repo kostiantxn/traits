@@ -112,6 +112,9 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
         if (name.TypeArgumentList.Arguments.Count == 0)
             return;
 
+        if (name.IsPartOfStructuredTrivia())
+            return;
+
         var info = cx.SemanticModel.GetSymbolInfo(name);
         if (info.Symbol is INamedTypeSymbol type)
         {
@@ -203,9 +206,9 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
     /// <summary>
     ///     Returns all traits this parameter requires.
     /// </summary>
-    private static ISet<INamedTypeSymbol> Constraints(ITypeSymbol parameter)
+    private static ISet<INamedTypeSymbol> Constraints(ITypeParameterSymbol parameter)
     {
-        var constraints = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var set = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
         foreach (var attribute in parameter.GetAttributes())
         {
@@ -225,12 +228,12 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             if (type.Value is not INamedTypeSymbol { IsGenericType: true } trait)
                 continue;
 
-            // Substitute the generics specified as type arguments for the attribute
-            // (e.g., `IFrom<S, T>` -> `IFrom<S, string>` for `From<string>`).
-            trait = trait.OriginalDefinition;
-
+            // Substitute trait type parameters with type arguments from the attribute
+            // (e.g., `IFrom<,>` -> `IFrom<T, string>` for `<[From<string>] T>`).
             var arguments = new List<ITypeSymbol> { parameter };
 
+            // Extract `nameof` arguments for generic type parameters
+            // (e.g., for signatures like `<[Into(nameof(Y))] X, Y>`).
             if (attribute.ConstructorArguments.Length > 0)
             {
                 foreach (var argument in attribute.ConstructorArguments)
@@ -240,21 +243,37 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
 
                     // TODO: Report a diagnostic if the referenced type cannot be found.
                     // TODO: Resolve the type from a semantic model if it references a concrete type.
-                    var referenced = Referenced(parameter.ContainingSymbol, name);
+                    var referenced = Referenced(name, parameter.ContainingSymbol);
                     if (referenced is not null)
                         arguments.Add(referenced);
                 }
             }
+            // Otherwise, if the attribute is generic, extract its type arguments
+            // (e.g., for signatures like `<[Into<string>] X>`).
             else if (attribute.AttributeClass.IsGenericType)
                 arguments.AddRange(attribute.AttributeClass.TypeArguments);
 
-            // TODO: Search for transitive constraints (e.g., `Monoid` implies `Semigroup`).
-            constraints.Add(trait.Construct(arguments.ToArray()));
+            if (!set.Add(trait.OriginalDefinition.Construct(arguments.ToArray())))
+                continue;
+
+            // Add all traits implied by the current trait. For example, if the current 
+            // type parameter is marked with `[Monoid] T`, then it is implied that `T` also
+            // implements the `Semigroup` trait, and it should thus be added to the set.
+            var implications = Constraints(trait.TypeParameters.First());
+
+            foreach (var implication in implications)
+            {
+                var substituted = implication;
+                for (var i = 0; i < trait.Arity; ++i)
+                    substituted = substituted.Substitute(trait.TypeParameters[i], arguments[i]);
+
+                set.Add(substituted);
+            }
         }
 
-        return constraints;
+        return set;
 
-        static ITypeSymbol? Referenced(ISymbol symbol, string name)
+        static ITypeSymbol? Referenced(string name, ISymbol symbol)
         {
             if (symbol is IMethodSymbol method)
             {
@@ -270,7 +289,7 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
                     return type.TypeArguments[index];
             }
 
-            return symbol is not INamespaceSymbol ? Referenced(symbol.ContainingSymbol, name) : null;
+            return symbol is not INamespaceSymbol ? Referenced(name, symbol.ContainingSymbol) : null;
         }
     }
 
@@ -279,8 +298,8 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
     /// </summary>
     private static ISet<INamedTypeSymbol> Implementations(ITypeSymbol argument, Compilation compilation)
     {
-        if (argument.TypeKind == TypeKind.TypeParameter)
-            return Constraints(argument);
+        if (argument is ITypeParameterSymbol parameter)
+            return Constraints(parameter);
         else
         {
             var visitor = new TraitsVisitor(argument);

@@ -14,11 +14,11 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash<int>(),
+            Hash.Definition() + Hash.For<int>(),
             """
-            static class Test
+            class Test
             {
-                static void Case()
+                void Case()
                 {
                     Hash.Of(42);
                 }
@@ -31,11 +31,11 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash<int>(),
+            Hash.Definition() + Hash.For<int>(),
             """
-            static class Test
+            class Test
             {
-                static void Case()
+                void Case()
                 {
                     Hash.Of(42L);
                 }
@@ -49,13 +49,13 @@ public class TraitConstraintTests
     [Fact]
     public async Task EmitsNothing_OnArgumentOfImplementedType()
     {
-        // lang=C
+        // lang=C#
         await Verify.Analyzer(
-            Hash<int>(),
+            Hash.Definition() + Hash.For<int>(),
             """
-            static class Test
+            class Test
             {
-                static void Case(int x)
+                void Case(int x)
                 {
                     Hash.Of(x);
                 }
@@ -68,11 +68,11 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash<int>(),
+            Hash.Definition() + Hash.For<int>(),
             """
-            static class Test
+            class Test
             {
-                static void Case(double x)
+                void Case(double x)
                 {
                     Hash.Of(x);
                 }
@@ -88,11 +88,11 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash<int>(),
+            Hash.Definition() + Hash.For<int>(),
             """
-            static class Test
+            class Test
             {
-                static void Case<[Hash] T>(T x)
+                void Case<[Hash] T>(T x)
                 {
                     Hash.Of(x);
                 }
@@ -107,12 +107,12 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash<int>(),
-            Default<int>(),
+            Hash.Definition() + Hash.For<int>(),
+            Default.Definition() + Default.For<int>(),
             $$"""
-            static class Test
+            class Test
             {
-                static void Case<{{attributes}} T>(T x)
+                void Case<{{attributes}} T>(T x)
                 {
                     Hash.Of(x);
                 }
@@ -123,43 +123,165 @@ public class TraitConstraintTests
                 .WithLocation(File, 5, 9));
     }
 
-    private static string Hash<T>() =>
-        Hash(typeof(T));
+    [Fact]
+    public async Task EmitsNothing_WhenTraitRequiresAnotherTrait_AndItIsImplemented()
+    {
+        // lang=C#
+        await Verify.Analyzer(
+            $$"""
+            using Traits;
+            
+            [Trait] interface ISemigroup<S> { }
+            [Trait] interface IMonoid<[Semigroup] S> { }
+            
+            sealed class IntSemigroup : ISemigroup<int> { }
+            sealed class IntMonoid : IMonoid<int> { }
+            """);
+    }
 
-    private static string Hash(Type type) =>
-        $$"""
-        using Traits;
+    [Fact]
+    public async Task EmitsError_WhenTraitRequiresAnotherTrait_AndItIsNotImplemented()
+    {
+        // lang=C#
+        await Verify.Analyzer(
+            $$"""
+            using Traits;
+            
+            [Trait] interface ISemigroup<S> { }
+            [Trait] interface IMonoid<[Semigroup] S> { }
+            
+            sealed class IntMonoid : IMonoid<int> { }
+            """.Path(File),
+            DiagnosticResult
+                .CompilerError(Diagnostics.Constraint.IsNotSatisfied.Id)
+                .WithLocation(File, 6, 26));
+    }
 
-        [Trait]
-        interface IHash<S>
-        {
-            int Of(S self);
-        }
+    [Fact]
+    public async Task EmitsNothing_WhenTraitImpliesAnotherTrait()
+    {
+        // lang=C#
+        await Verify.Analyzer(
+            Monoid.Definition(),
+            Semigroup.Definition(),
+            $$"""
+            class Test
+            {
+                void Case<[Monoid] T>(T x)
+                {
+                    Semigroup.Dot(x, Monoid.Zero<T>());
+                }
+            }
+            """);
+    }
 
-        sealed class {{type.Name}}Hash : IHash<{{type.FullName}}>
-        {
-            public int Of({{type.FullName}} self) =>
-                self.GetHashCode();
-        }
-        """;
+    private static class Hash
+    {
+        public static string Definition() =>
+            """
+            using Traits;
 
-    private static string Default<T>() =>
-        Default(typeof(T));
+            [Trait]
+            interface IHash<S>
+            {
+                int Of(S self);
+            }
+            """ + "\n\n";
 
-    private static string Default(Type type) =>
-        $$"""
-        using Traits;
+        public static string For<T>() =>
+            For(typeof(T));
 
-        [Trait]
-        interface IDefault<S>
-        {
-            S Of();
-        }
+        public static string For(Type type) =>
+            $$"""
+            sealed class {{type.Name}}Hash : IHash<{{type.FullName}}>
+            {
+                public int Of({{type.FullName}} self) =>
+                    throw new System.NotImplementedException();
+            }
+            """;
+    }
 
-        sealed class {{type.Name}}Default : IDefault<{{type.FullName}}>
-        {
-            public {{type.FullName}} Of() =>
-                default;
-        }
-        """;
+    private static class Default
+    {
+        public static string Definition() =>
+            $$"""
+            using Traits;
+
+            [Trait]
+            interface IDefault<S>
+            {
+                S Of();
+            }
+            """ + "\n\n";
+
+        public static string For<T>() =>
+            For(typeof(T));
+
+        public static string For(Type type) =>
+            $$"""
+            sealed class {{type.Name}}Default : IDefault<{{type.FullName}}>
+            {
+                public {{type.FullName}} Of() =>
+                    default;
+            }
+            """;
+    }
+
+    private static class Semigroup
+    {
+        public static string Definition() =>
+            """
+            using Traits;
+
+            [Trait]
+            interface ISemigroup<S> 
+            { 
+                S Dot(S x, S y);
+            }
+            """ + "\n\n";
+
+        public static string For<T>() =>
+            For(typeof(T));
+
+        public static string For(Type type) =>
+            $$"""
+            sealed class {{type.Name}}Semigroup : ISemigroup<{{type.FullName}}>
+            {
+                public {{type.FullName}} Dot({{type.FullName}} x, {{type.FullName}} y) =>
+                    throw new System.NotImplementedException();
+            }
+
+            sealed class {{type.Name}}Monoid : IMonoid<{{type.FullName}}>
+            {
+                public {{type.FullName}} Zero() =>
+                    throw new System.NotImplementedException();
+            }
+            """;
+    }
+
+    private static class Monoid
+    {
+        public static string Definition() =>
+            """
+            using Traits;
+
+            [Trait]
+            interface IMonoid<[Semigroup] S>
+            { 
+                S Zero();
+            }
+            """ + "\n\n";
+
+        public static string For<T>() =>
+            For(typeof(T));
+
+        public static string For(Type type) =>
+            $$"""
+            sealed class {{type.Name}}Monoid : IMonoid<{{type.FullName}}>
+            {
+                public {{type.FullName}} Zero() =>
+                    throw new System.NotImplementedException();
+            }
+            """;
+    }
 }

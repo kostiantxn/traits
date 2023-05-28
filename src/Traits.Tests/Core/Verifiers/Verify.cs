@@ -16,20 +16,20 @@ internal static class Verify
         MetadataReference.CreateFromFile(typeof(TraitAttribute).Assembly.Location),
     };
 
-    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, DiagnosticResult[])"/>
+    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
     public static Task Analyzer(
         Source source,
         params DiagnosticResult[] diagnostics) =>
         Analyzer(new[] { source }, diagnostics);
 
-    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, DiagnosticResult[])"/>
+    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
     public static Task Analyzer(
         Source source0,
         Source source1,
         params DiagnosticResult[] diagnostics) =>
         Analyzer(new[] { source0, source1 }, diagnostics);
 
-    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, DiagnosticResult[])"/>
+    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
     public static Task Analyzer(
         Source source0,
         Source source1,
@@ -37,17 +37,33 @@ internal static class Verify
         params DiagnosticResult[] diagnostics) =>
         Analyzer(new[] { source0, source1, source2 }, diagnostics);
 
+    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
+    public static Task Analyzer(
+        Source source0,
+        Source source1,
+        Source source2,
+        Source source3,
+        params DiagnosticResult[] diagnostics) =>
+        Analyzer(new[] { source0, source1, source2, source3 }, diagnostics);
+
+    /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
+    public static Task Analyzer(
+        Source source0,
+        Source source1,
+        Source source2,
+        Source source3,
+        Source source4,
+        params DiagnosticResult[] diagnostics) =>
+        Analyzer(new[] { source0, source1, source2, source3, source4 }, diagnostics);
+
     /// <summary>
     ///     Runs the <see cref="TraitAnalyzer"/> and verifies reported diagnostics.
     /// </summary>
-    public static Task Analyzer(IEnumerable<Source> sources, params DiagnosticResult[] diagnostics)
+    public static Task Analyzer(IEnumerable<Source> sources, IEnumerable<DiagnosticResult> diagnostics)
     {
         var test = new CSharpAnalyzerTest<TraitAnalyzer, XUnitVerifier>
         {
-            TestState =
-            {
-                ReferenceAssemblies = ReferenceAssemblies.Net.Net60
-            }
+            TestState = { ReferenceAssemblies = ReferenceAssemblies.Net.Net60 }
         };
 
         foreach (var source in sources)

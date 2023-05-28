@@ -4,6 +4,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Samples", "Traits.Sa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Common", "..\src\Traits.Common\Traits.Common.csproj", "{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Analyzers", "..\src\Traits.Analyzers\Traits.Analyzers.csproj", "{D30F82C1-4D33-4A52-80D4-3AF70328D0A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traits.Generators", "..\src\Traits.Generators\Traits.Generators.csproj", "{DAEC3335-2DED-439A-BB58-B685270955A6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +22,13 @@ Global
 		{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D12AC9C4-65A7-426C-B86C-EE8C7EF31C41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D30F82C1-4D33-4A52-80D4-3AF70328D0A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D30F82C1-4D33-4A52-80D4-3AF70328D0A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D30F82C1-4D33-4A52-80D4-3AF70328D0A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D30F82C1-4D33-4A52-80D4-3AF70328D0A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DAEC3335-2DED-439A-BB58-B685270955A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAEC3335-2DED-439A-BB58-B685270955A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAEC3335-2DED-439A-BB58-B685270955A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAEC3335-2DED-439A-BB58-B685270955A6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

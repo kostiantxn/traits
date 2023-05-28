@@ -62,12 +62,10 @@ internal static class Templates
             {{accessibility}} static class {{name}}{{generics}}
             {
             #pragma warning disable CS0649
-            #pragma warning disable TR2001
-                private static class Impl<{{self}}>
+                private static class Impl<[{{SelfConstraintAttribute()}}] {{self}}>
                 {
                     public static {{type.ToFullDisplayString()}} Instance;
                 }
-            #pragma warning restore TR2001
             #pragma warning restore CS0649
 
                 static {{name}}()
@@ -89,7 +87,7 @@ internal static class Templates
                         var arguments = trait.Definition.GenericTypeArguments.Skip(1).Append(self).ToArray();
                         var impl = typeof(Impl<>).MakeGenericType(arguments);
 
-                        var instance = impl.GetField(nameof(Impl<object>.Instance));
+                        var instance = impl.GetField("Instance");
                         if (instance is null)
                             continue;
 
@@ -118,6 +116,31 @@ internal static class Templates
 
         string Method(IMethodSymbol method)
         {
+            var attribute = SelfConstraintAttribute();
+            var parameters = string.Join(", ", method.Parameters.Select(x => x.ToParameterString()));
+            var arguments = string.Join(", ", method.Parameters.Select(x => x.ToArgumentString()));
+
+            // TODO: Include attributes from the original methods.
+            // TODO: Include generics from the original method (and not only the `self` parameter).
+            // TODO: Include other `self` type parameter attributes.
+            // TODO: Include `self` type parameter constraints.
+            return
+                $"""
+                    /// <inheritdoc cref="{Escape(type.ToFullDisplayString())}.{Escape(method.Name)}"/>
+                    [global::System.Runtime.CompilerServices.MethodImplAttribute(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+                    public static {method.ReturnType.ToFullDisplayString()} {method.Name}<[{attribute}] {self}>({parameters}) =>
+                        Impl<{self}>.Instance.{method.Name}({arguments});
+                """;
+        }
+
+        string Filter(int tab) =>
+            string.Join(
+                string.Empty,
+                type.TypeParameters.Skip(1).Select((x, i) => 
+                    $".Where(x => x.GenericTypeArguments[{i + 1}] == typeof({x.Name}))\n" + new string(' ', tab)));
+
+        string SelfConstraintAttribute()
+        {
             var attribute = name + "Attribute";
 
             if (!type.ContainingNamespace.IsGlobalNamespace)
@@ -128,24 +151,8 @@ internal static class Templates
             if (type.TypeParameters.Length > 1)
                 attribute = attribute + "(" + string.Join(", ", type.TypeParameters.Skip(1).Select(x => "nameof(" + x.Name + ")")) + ")";
 
-            // TODO: Include attributes from the original methods.
-            // TODO: Include generics from the original method (and not only the `self` parameter).
-            // TODO: Include other `self` type parameter attributes.
-            // TODO: Include `self` type parameter constraints.
-            return
-                $"""
-                    /// <inheritdoc cref="{Escape(type.ToFullDisplayString())}.{Escape(method.ToFullDisplayString())}"/>
-                    [global::System.Runtime.CompilerServices.MethodImplAttribute(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-                    public static {method.ReturnType} {method.Name}<[{attribute}] {self}>({string.Join(", ", method.Parameters.Select(x => x.ToParameterString()))}) =>
-                        Impl<{self.ToFullDisplayString()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.ToArgumentString()))});
-                """;
+            return attribute;
         }
-
-        string Filter(int tab) =>
-            string.Join(
-                string.Empty,
-                type.TypeParameters.Skip(1).Select((x, i) => 
-                    $".Where(x => x.GenericTypeArguments[{i + 1}] == typeof({x.Name}))\n" + new string(' ', tab)));
     }
 
     /// <summary>

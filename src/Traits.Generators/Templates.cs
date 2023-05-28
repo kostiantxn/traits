@@ -135,6 +135,7 @@ internal static class Templates
             return
                 $"""
                     /// <inheritdoc cref="{Escape(type.ToFullDisplayString())}.{Escape(method.ToFullDisplayString())}"/>
+                    [global::System.Runtime.CompilerServices.MethodImplAttribute(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
                     public static {method.ReturnType} {method.Name}<[{attribute}] {self}>({string.Join(", ", method.Parameters.Select(x => x.ToParameterString()))}) =>
                         Impl<{self.ToFullDisplayString()}>.Instance.{method.Name}({string.Join(", ", method.Parameters.Select(x => x.ToArgumentString()))});
                 """;

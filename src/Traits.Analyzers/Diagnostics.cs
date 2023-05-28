@@ -78,10 +78,10 @@ public static class Diagnostics
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);
 
-        public static readonly DiagnosticDescriptor MustBeAsVisibleAsTrait = new(
+        public static readonly DiagnosticDescriptor MustBeAsAccessibleAsTrait = new(
             "TR1004",
-            "Trait implementation should be as visible as the trait itself",
-            "Trait implementation should be as visible as the trait itself.",
+            "Trait implementation should have the same accessibility as the trait itself",
+            "Trait implementation should have the same accessibility as the trait itself.",
             "Traits",
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);
@@ -98,6 +98,15 @@ public static class Diagnostics
             "TR1006",
             "Trait implementations should be unique and unambiguous",
             "Conflicting implementation of trait '{0}'.",
+            "Traits",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
+        // TODO.
+        public static readonly DiagnosticDescriptor MustBeLocal = new(
+            "TR1007",
+            "Trait implementations cannot be completely foreign",
+            "Either the trait, implementing type, or type parameters should be defined in the current assembly.",
             "Traits",
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);

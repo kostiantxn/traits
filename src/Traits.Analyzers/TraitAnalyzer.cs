@@ -23,7 +23,7 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
             Diagnostics.Implementation.MustBeSealed,
             Diagnostics.Implementation.MustNotImplementOtherInterfaces,
             Diagnostics.Implementation.MustContainParameterlessConstructor,
-            Diagnostics.Implementation.MustBeAsVisibleAsTrait,
+            Diagnostics.Implementation.MustBeAsAccessibleAsTrait,
             Diagnostics.Implementation.MustNotBeNested,
             Diagnostics.Implementation.Conflict,
             Diagnostics.Constraint.IsNotSatisfied);
@@ -83,11 +83,11 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
                 .Report(cx, loc: node.Identifier);
 
         if (impl.DeclaredAccessibility != trait.DeclaredAccessibility)
-            Diagnostics.Implementation.MustBeAsVisibleAsTrait
+            Diagnostics.Implementation.MustBeAsAccessibleAsTrait
                 .Report(cx, loc: node.Identifier);
 
         if (impl.InstanceConstructors.Length > 0 &&
-            impl.InstanceConstructors.All(x => x.Parameters.Length > 0))
+            impl.InstanceConstructors.All(x => x.Parameters.Length > 0 || x.DeclaredAccessibility != Accessibility.Public))
             Diagnostics.Implementation.MustContainParameterlessConstructor
                 .Report(cx, loc: node.Identifier);
 

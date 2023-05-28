@@ -1,15 +1,16 @@
-using Microsoft.CodeAnalysis.Testing;
+﻿using Microsoft.CodeAnalysis.Testing;
 using Traits.Analyzers;
-using Traits.Tests.Verifiers;
+using Traits.Tests.Core.Verifiers;
 
-namespace Traits.Tests;
+namespace Traits.Tests.TraitAnalyzerTests;
 
-public class TraitAnalyzerTests
+public class TraitInterfaceTests
 {
     [Fact]
-    public async Task EmitsError_WhenTraitInterfaceIsNotGeneric()
+    public async Task EmitsError_WhenNotGeneric()
     {
-        await Verify.Traits(
+        // lang=C#
+        await Verify.Analyzer(
             """
             using Traits;
 
@@ -21,13 +22,14 @@ public class TraitAnalyzerTests
             """,
             DiagnosticResult
                 .CompilerError(Diagnostics.Trait.MustHaveAtLeastOneGenericParameter.Id)
-                .WithLocation(line: 4, column: 11));
+                .WithLocation(4, 11));
     }
 
     [Fact]
-    public async Task EmitsError_WhenTraitInterfaceExtendsOtherInterfaces()
+    public async Task EmitsError_WhenExtendsOtherInterfaces()
     {
-        await Verify.Traits(
+        // lang=C#
+        await Verify.Analyzer(
             """
             using System;
             using Traits;
@@ -40,13 +42,14 @@ public class TraitAnalyzerTests
             """,
             DiagnosticResult
                 .CompilerError(Diagnostics.Trait.ShouldNotExtendOtherInterfaces.Id)
-                .WithLocation(line: 5, column: 20));
+                .WithLocation(5, 20));
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenTraitInterfaceIsCorrect()
+    public async Task EmitsNothing_WhenCorrectlyDefined()
     {
-        await Verify.Traits(
+        // lang=C#
+        await Verify.Analyzer(
             """
             using Traits;
 
@@ -59,9 +62,10 @@ public class TraitAnalyzerTests
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenInterfaceIsNotMarkedAsTrait()
+    public async Task EmitsNothing_WhenNotMarkedAsTrait()
     {
-        await Verify.Traits(
+        // lang=C#
+        await Verify.Analyzer(
             """
             using System;
             using Traits;

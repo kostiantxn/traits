@@ -74,12 +74,19 @@ var hash = Hash.Of(new Point(X: 4, Y: 2));
 
 You should note that you _cannot_ call the `Hash.Of` method with a value of a type, which does not implement the `IHash<S>` trait.
 The `TraitAnalyzer` will issue an error if you attempt to pass an argument of such a type into the method.
-This also includes generic type parameters:
+This also includes generic type parameters.
 
-> **Warning**: The following snippet _will not_ compile.
+> **Warning**: The following snippets _will not_ compile.
+
+```csharp
+var hash = Hash.Of("X");
+                // ~~~ TR2001: The type 'string' must satisfy trait constraint 'IHash<string>'
+```
+Or:
 ```csharp
 int Bucket<T>(T item, int size) =>
     Hash.Of(item) % size;
+         // ~~~~ TR2001: The type 'T' must satisfy trait constraint 'IHash<T>'
 ```
 
 ### Require `T` to Implement a Trait
@@ -93,7 +100,8 @@ By using this attribute, we can now make the `Bucket` method compile:
 int Bucket<[Hash] T>(T item, int size) =>
     Hash.Of(item) % size;
 ```
-And then we can pass any value of a type that implements the `IHash<S>` trait to the method:
+And then we can pass any value of a type that implements the `IHash<S>` trait to the `Bucket` method.
+Since we previously implemented the trait for `Point`, we can call:
 ```csharp
 var bucket = Bucket(new Point(X: 4, Y: 2), size);
 ```

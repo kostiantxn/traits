@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Runtime.CompilerServices;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
@@ -18,43 +19,32 @@ internal static class Verify
 
     /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
     public static Task Analyzer(
-        Source source,
-        params DiagnosticResult[] diagnostics) =>
-        Analyzer(new[] { source }, diagnostics);
+        DiagnosticDescriptor diagnostic,
+        [InterpolatedStringHandlerArgument("diagnostic")] SourceInterpolatedStringHandler handler,
+        params Source[] sources) =>
+        Analyzer(sources.Append(handler.Source));
 
     /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
     public static Task Analyzer(
-        Source source0,
-        Source source1,
-        params DiagnosticResult[] diagnostics) =>
-        Analyzer(new[] { source0, source1 }, diagnostics);
+        DiagnosticDescriptor[] diagnostics,
+        [InterpolatedStringHandlerArgument("diagnostics")] SourceInterpolatedStringHandler handler,
+        params Source[] sources) =>
+        Analyzer(sources.Append(handler.Source));
 
     /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
     public static Task Analyzer(
-        Source source0,
-        Source source1,
-        Source source2,
-        params DiagnosticResult[] diagnostics) =>
-        Analyzer(new[] { source0, source1, source2 }, diagnostics);
+        Dictionary<string, DiagnosticDescriptor> diagnostics,
+        [InterpolatedStringHandlerArgument("diagnostics")] SourceInterpolatedStringHandler handler,
+        params Source[] sources) =>
+        Analyzer(sources.Append(handler.Source));
 
     /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
-    public static Task Analyzer(
-        Source source0,
-        Source source1,
-        Source source2,
-        Source source3,
-        params DiagnosticResult[] diagnostics) =>
-        Analyzer(new[] { source0, source1, source2, source3 }, diagnostics);
+    public static Task Analyzer(params Source[] sources) =>
+        Analyzer(sources.AsEnumerable());
 
     /// <inheritdoc cref="Analyzer(IEnumerable{Source}, IEnumerable{DiagnosticResult})"/>
-    public static Task Analyzer(
-        Source source0,
-        Source source1,
-        Source source2,
-        Source source3,
-        Source source4,
-        params DiagnosticResult[] diagnostics) =>
-        Analyzer(new[] { source0, source1, source2, source3, source4 }, diagnostics);
+    public static Task Analyzer(IEnumerable<Source> sources) =>
+        Analyzer(sources, Enumerable.Empty<DiagnosticResult>());
 
     /// <summary>
     ///     Runs the <see cref="TraitAnalyzer"/> and verifies reported diagnostics.
@@ -69,11 +59,11 @@ internal static class Verify
         foreach (var source in sources)
         {
             if (source.Path is not null)
-                test.TestState.Sources.Add((source.Path, source.Text));
+                test.TestState.Sources.Add((source.Path, source.Analyze));
             else
-                test.TestState.Sources.Add(source.Text);
+                test.TestState.Sources.Add(source.Analyze);
 
-            var generator = Driver(source.Text).GetRunResult();
+            var generator = Driver(source.Generate).GetRunResult();
 
             foreach (var generated in generator.GeneratedTrees)
                 test.TestState.Sources.Add(generated.GetText());

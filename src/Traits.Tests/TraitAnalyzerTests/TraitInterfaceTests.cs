@@ -1,5 +1,4 @@
-﻿using Microsoft.CodeAnalysis.Testing;
-using Traits.Analyzers;
+﻿using Traits.Analyzers;
 using Traits.Tests.Core.Verifiers;
 
 namespace Traits.Tests.TraitAnalyzerTests;
@@ -10,19 +9,17 @@ public class TraitInterfaceTests
     public async Task EmitsError_WhenNotGeneric()
     {
         // lang=C#
-        await Verify.Analyzer(
-            """
-            using Traits;
+         await Verify.Analyzer(
+             Diagnostics.Trait.MustHaveAtLeastOneGenericParameter,
+             $$"""
+             using Traits;
 
-            [Trait]
-            interface IHash
-            {
-                int Of(object self);
-            }
-            """,
-            DiagnosticResult
-                .CompilerError(Diagnostics.Trait.MustHaveAtLeastOneGenericParameter.Id)
-                .WithLocation(4, 11));
+             [Trait]
+             interface {{"IHash"}}
+             {
+                 int Of(object self);
+             }
+             """);
     }
 
     [Fact]
@@ -30,19 +27,17 @@ public class TraitInterfaceTests
     {
         // lang=C#
         await Verify.Analyzer(
-            """
+            Diagnostics.Trait.ShouldNotExtendOtherInterfaces,
+            $$"""
             using System;
             using Traits;
 
             [Trait]
-            interface IHash<S> : ICloneable
+            interface IHash<S> {{": ICloneable"}}
             {
                 int Of(S self);
             }
-            """,
-            DiagnosticResult
-                .CompilerError(Diagnostics.Trait.ShouldNotExtendOtherInterfaces.Id)
-                .WithLocation(5, 20));
+            """);
     }
 
     [Fact]

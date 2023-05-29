@@ -1,7 +1,7 @@
 ﻿namespace Traits.Tests.Core.Sources;
 
-internal record Source(string Text, string? Path = null)
+internal record Source(string Analyze, string Generate, string? Path = null)
 {
     public static implicit operator Source(string text) =>
-        new(text);
+        new(Analyze: text, Generate: text);
 }

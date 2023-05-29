@@ -1,20 +1,15 @@
-using Microsoft.CodeAnalysis.Testing;
 using Traits.Analyzers;
-using Traits.Tests.Core.Sources;
 using Traits.Tests.Core.Verifiers;
 
 namespace Traits.Tests.TraitAnalyzerTests;
 
 public class TraitConstraintTests
 {
-    private const string File = "Test.cs";
-
     [Fact]
     public async Task EmitsNothing_OnLiteralOfImplementedType()
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash.Definition() + Hash.For<int>(),
             """
             class Test
             {
@@ -23,7 +18,8 @@ public class TraitConstraintTests
                     Hash.Of(42);
                 }
             }
-            """);
+            """,
+            Hash.Definition() + Hash.For<int>());
     }
 
     [Fact]
@@ -31,19 +27,17 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash.Definition() + Hash.For<int>(),
-            """
+            Diagnostics.Constraint.IsNotSatisfied,
+            $$"""
             class Test
             {
                 void Case()
                 {
-                    Hash.Of(42L);
+                    {{"Hash.Of"}}(42L);
                 }
             }
-            """.Path(File),
-            DiagnosticResult
-                .CompilerError(Diagnostics.Constraint.IsNotSatisfied.Id)
-                .WithLocation(File, 5, 9));
+            """,
+            Hash.Definition() + Hash.For<int>());
     }
 
     [Fact]
@@ -51,7 +45,6 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash.Definition() + Hash.For<int>(),
             """
             class Test
             {
@@ -60,7 +53,8 @@ public class TraitConstraintTests
                     Hash.Of(x);
                 }
             }
-            """);
+            """,
+            Hash.Definition() + Hash.For<int>());
     }
 
     [Fact]
@@ -68,19 +62,17 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash.Definition() + Hash.For<int>(),
-            """
+            Diagnostics.Constraint.IsNotSatisfied,
+            $$"""
             class Test
             {
                 void Case(double x)
                 {
-                    Hash.Of(x);
+                    {{"Hash.Of"}}(x);
                 }
             }
-            """.Path(File),
-            DiagnosticResult
-                .CompilerError(Diagnostics.Constraint.IsNotSatisfied.Id)
-                .WithLocation(File, 5, 9));
+            """,
+            Hash.Definition() + Hash.For<int>());
     }
 
     [Fact]
@@ -88,7 +80,6 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash.Definition() + Hash.For<int>(),
             """
             class Test
             {
@@ -97,7 +88,8 @@ public class TraitConstraintTests
                     Hash.Of(x);
                 }
             }
-            """);
+            """,
+            Hash.Definition() + Hash.For<int>());
     }
 
     [Theory]
@@ -107,20 +99,18 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Hash.Definition() + Hash.For<int>(),
-            Default.Definition() + Default.For<int>(),
+            Diagnostics.Constraint.IsNotSatisfied,
             $$"""
             class Test
             {
-                void Case<{{attributes}} T>(T x)
+                void Case<{{attributes:_}} T>(T x)
                 {
-                    Hash.Of(x);
+                    {{"Hash.Of"}}(x);
                 }
             }
-            """.Path(File),
-            DiagnosticResult
-                .CompilerError(Diagnostics.Constraint.IsNotSatisfied.Id)
-                .WithLocation(File, 5, 9));
+            """,
+            Hash.Definition() + Hash.For<int>(),
+            Default.Definition() + Default.For<int>());
     }
 
     [Fact]
@@ -128,7 +118,7 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            $$"""
+            """
             using Traits;
             
             [Trait] interface ISemigroup<S> { }
@@ -144,17 +134,15 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
+            Diagnostics.Constraint.IsNotSatisfied,
             $$"""
             using Traits;
             
             [Trait] interface ISemigroup<S> { }
             [Trait] interface IMonoid<[Semigroup] S> { }
             
-            sealed class IntMonoid : IMonoid<int> { }
-            """.Path(File),
-            DiagnosticResult
-                .CompilerError(Diagnostics.Constraint.IsNotSatisfied.Id)
-                .WithLocation(File, 6, 26));
+            sealed class IntMonoid : {{"IMonoid<int>"}} { }
+            """);
     }
 
     [Fact]
@@ -162,9 +150,7 @@ public class TraitConstraintTests
     {
         // lang=C#
         await Verify.Analyzer(
-            Monoid.Definition(),
-            Semigroup.Definition(),
-            $$"""
+            """
             class Test
             {
                 void Case<[Monoid] T>(T x)
@@ -172,7 +158,9 @@ public class TraitConstraintTests
                     Semigroup.Dot(x, Monoid.Zero<T>());
                 }
             }
-            """);
+            """,
+            Monoid.Definition(),
+            Semigroup.Definition());
     }
 
     private static class Hash
@@ -204,9 +192,9 @@ public class TraitConstraintTests
     private static class Default
     {
         public static string Definition() =>
-            $$"""
+            """
             using Traits;
-
+            
             [Trait]
             interface IDefault<S>
             {
@@ -248,12 +236,6 @@ public class TraitConstraintTests
             sealed class {{type.Name}}Semigroup : ISemigroup<{{type.FullName}}>
             {
                 public {{type.FullName}} Dot({{type.FullName}} x, {{type.FullName}} y) =>
-                    throw new System.NotImplementedException();
-            }
-
-            sealed class {{type.Name}}Monoid : IMonoid<{{type.FullName}}>
-            {
-                public {{type.FullName}} Zero() =>
                     throw new System.NotImplementedException();
             }
             """;

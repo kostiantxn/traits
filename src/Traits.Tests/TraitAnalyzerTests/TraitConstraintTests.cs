@@ -16,6 +16,7 @@ public class TraitConstraintTests
                 void Case()
                 {
                     Hash.Of(42);
+                    Hash.Of<int>(42);
                 }
             }
             """,
@@ -33,7 +34,8 @@ public class TraitConstraintTests
             {
                 void Case()
                 {
-                    {{"Hash.Of"}}(42L);
+                    Hash.{{"Of"}}(42L);
+                    Hash.{{"Of<long>"}}(42L);
                 }
             }
             """,
@@ -51,6 +53,7 @@ public class TraitConstraintTests
                 void Case(int x)
                 {
                     Hash.Of(x);
+                    Hash.Of<int>(x);
                 }
             }
             """,
@@ -66,9 +69,10 @@ public class TraitConstraintTests
             $$"""
             class Test
             {
-                void Case(double x)
+                void Case(long x)
                 {
-                    {{"Hash.Of"}}(x);
+                    Hash.{{"Of"}}(x);
+                    Hash.{{"Of<long>"}}(x);
                 }
             }
             """,
@@ -86,6 +90,7 @@ public class TraitConstraintTests
                 void Case<[Hash] T>(T x)
                 {
                     Hash.Of(x);
+                    Hash.Of<T>(x);
                 }
             }
             """,
@@ -105,7 +110,8 @@ public class TraitConstraintTests
             {
                 void Case<{{attributes:_}} T>(T x)
                 {
-                    {{"Hash.Of"}}(x);
+                    Hash.{{"Of"}}(x);
+                    Hash.{{"Of<T>"}}(x);
                 }
             }
             """,
@@ -162,6 +168,51 @@ public class TraitConstraintTests
             Monoid.Definition(),
             Semigroup.Definition());
     }
+
+    [Fact]
+    public async Task EmitsError_WhenGenericClassRequiresTrait_AndItIsNotImplemented()
+    {
+        // lang=C#
+        await Verify.Analyzer(
+            Diagnostics.Constraint.IsNotSatisfied,
+            $$"""
+            class Test
+            {
+                void Case()
+                {
+                    {{"Collection<int>"}} _ = new {{"Collection<int>"}}();
+                }
+            }
+            
+            class Collection<[Hash] T>
+            {
+            }
+            """,
+            Hash.Definition());
+    }
+
+    [Fact]
+    public async Task EmitsNothing_WhenGenericClassRequiresTrait_AndItIsImplemented()
+    {
+        // lang=C#
+        await Verify.Analyzer(
+            """
+            class Test
+            {
+                void Case()
+                {
+                    Collection<int> _ = new Collection<int>();
+                }
+            }
+            
+            class Collection<[Hash] T>
+            {
+            }
+            """,
+            Hash.Definition() + Hash.For<int>());
+    }
+
+    #region Traits
 
     private static class Hash
     {
@@ -266,4 +317,6 @@ public class TraitConstraintTests
             }
             """;
     }
+
+    #endregion
 }

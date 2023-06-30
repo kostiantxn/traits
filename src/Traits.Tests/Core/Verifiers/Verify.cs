@@ -53,7 +53,10 @@ internal static class Verify
     {
         var test = new CSharpAnalyzerTest<TraitAnalyzer, XUnitVerifier>
         {
-            TestState = { ReferenceAssemblies = ReferenceAssemblies.Net.Net60 }
+            TestState =
+            {
+                ReferenceAssemblies = ReferenceAssemblies.NetStandard.NetStandard20
+            }
         };
 
         foreach (var source in sources)

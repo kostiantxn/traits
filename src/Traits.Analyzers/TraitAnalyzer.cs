@@ -126,7 +126,7 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
                     .Report(cx, loc: name, violation.Argument, violation.Trait, violation.Parameter);
         }
 
-        if (info.Symbol is IMethodSymbol method && name.Parent is not InvocationExpressionSyntax)
+        if (info.Symbol is IMethodSymbol method)
         {
             foreach (var violation in Violations(method, cx.Compilation))
                 Diagnostics.Constraint.IsNotSatisfied
@@ -144,15 +144,19 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
         if (method.Arity == 0)
             return;
 
-        if (operation.SemanticModel is null)
-            return;
-
         if (operation.Syntax is not InvocationExpressionSyntax invocation)
             return;
 
-        foreach (var violation in Violations(method, cx.Compilation))
-            Diagnostics.Constraint.IsNotSatisfied
-                .Report(cx, loc: invocation.Expression, violation.Argument, violation.Trait, violation.Parameter);
+        var expression = invocation.Expression is MemberAccessExpressionSyntax member
+            ? member.Name
+            : invocation.Expression;
+
+        // Analyze the invoked expression only if it has implicit type arguments.
+        // It will otherwise be analyzed as a `GenericNameSyntax` node.
+        if (expression is not GenericNameSyntax)
+            foreach (var violation in Violations(method, cx.Compilation))
+                Diagnostics.Constraint.IsNotSatisfied
+                    .Report(cx, loc: expression, violation.Argument, violation.Trait, violation.Parameter);
 
         // TODO: Check inferred delegates.
         foreach (var _ in operation.Arguments)
@@ -249,7 +253,7 @@ public sealed class TraitAnalyzer : DiagnosticAnalyzer
                 }
             }
             // Otherwise, if the attribute is generic, extract its type arguments
-            // (e.g., for signatures like `<[Into<string>] X>`).
+            // (e.g., for signatures like `<[Into<string>] T>`).
             else if (attribute.AttributeClass.IsGenericType)
                 arguments.AddRange(attribute.AttributeClass.TypeArguments);
 

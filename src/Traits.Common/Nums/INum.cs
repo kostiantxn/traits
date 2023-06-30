@@ -1,8 +1,8 @@
 ﻿namespace Traits.Common.Nums;
 
 /// <summary>
-///     Defines a numeric type which implements the <c>+</c>, <c>-</c> (unary and binary),
-///     and <c>*</c> operators.
+///     Defines a numeric type which implements the
+///     <c>+</c>, <c>-</c> (unary and binary), and <c>*</c> operators.
 /// </summary>
 [Trait]
 public interface INum<S>

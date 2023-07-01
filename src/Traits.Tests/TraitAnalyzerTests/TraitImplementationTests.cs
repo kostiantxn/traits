@@ -6,7 +6,7 @@ namespace Traits.Tests.TraitAnalyzerTests;
 public class TraitImplementationTests
 {
     [Fact]
-    public async Task EmitsError_WhenNotSealed()
+    public async Task Error_WhenNotSealed()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -28,7 +28,7 @@ public class TraitImplementationTests
     }
 
     [Fact]
-    public async Task EmitsError_WhenImplementsOtherInterfaces()
+    public async Task Error_WhenImplementsOtherInterfaces()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -53,7 +53,7 @@ public class TraitImplementationTests
     }
 
     [Fact]
-    public async Task EmitsError_WhenDoesNotHavePublicParameterlessConstructor()
+    public async Task Error_WhenDoesNotHavePublicParameterlessConstructor()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -99,7 +99,7 @@ public class TraitImplementationTests
     }
 
     [Fact]
-    public async Task EmitsError_WhenHasDifferentAccessibility()
+    public async Task Error_WhenHasInconsistentAccessibility()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -142,7 +142,7 @@ public class TraitImplementationTests
     }
 
     [Fact]
-    public async Task EmitsError_WhenNested()
+    public async Task Error_WhenNested()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -167,7 +167,7 @@ public class TraitImplementationTests
     }
 
     [Fact]
-    public async Task EmitsError_WhenConflictsWithAnotherImplementation()
+    public async Task Error_WhenConflictsWithAnotherImplementation()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -194,7 +194,7 @@ public class TraitImplementationTests
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenCorrectlyDefined()
+    public async Task Noop_WhenCorrectlyDefined()
     {
         // lang=C#
         await Verify.Analyzer(

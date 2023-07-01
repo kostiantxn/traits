@@ -6,7 +6,7 @@ namespace Traits.Tests.TraitAnalyzerTests;
 public class TraitConstraintTests
 {
     [Fact]
-    public async Task EmitsNothing_OnLiteralOfImplementedType()
+    public async Task Noop_WhenLiteralIsPassed_AndTraitIsImplemented()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -24,7 +24,7 @@ public class TraitConstraintTests
     }
 
     [Fact]
-    public async Task EmitsError_OnLiteralOfUnimplementedType()
+    public async Task Error_WhenLiteralIsPassed_AndTraitIsNotImplemented()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -43,7 +43,7 @@ public class TraitConstraintTests
     }
 
     [Fact]
-    public async Task EmitsNothing_OnArgumentOfImplementedType()
+    public async Task Noop_WhenMethodParameterIsPassed_AndTraitIsImplemented()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -61,7 +61,7 @@ public class TraitConstraintTests
     }
 
     [Fact]
-    public async Task EmitsError_OnArgumentOfUnimplementedType()
+    public async Task Error_WhenMethodParameterIsPassed_AndTraitIsNotImplemented()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -80,7 +80,7 @@ public class TraitConstraintTests
     }
 
     [Fact]
-    public async Task EmitsNothing_OnArgumentOfRestrictedGenericType()
+    public async Task Noop_WhenMethodParameterIsPassed_AndTypeParameterIsConstrained()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -100,7 +100,7 @@ public class TraitConstraintTests
     [Theory]
     [InlineData("")]
     [InlineData("[Default]")]
-    public async Task EmitsError_OnArgumentOfUnrestrictedGenericType(string attributes)
+    public async Task Error_WhenMethodParameterIsPassed_AndTypeParameterIsNotConstrained(string attributes)
     {
         // lang=C#
         await Verify.Analyzer(
@@ -120,23 +120,23 @@ public class TraitConstraintTests
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenTraitRequiresAnotherTrait_AndItIsImplemented()
+    public async Task Noop_WhenTraitRequiresAnotherTrait_AndItIsImplemented()
     {
         // lang=C#
         await Verify.Analyzer(
             """
             using Traits;
             
-            [Trait] interface ISemigroup<S> { }
-            [Trait] interface IMonoid<[Semigroup] S> { }
+            [Trait] interface IA<S> { }
+            [Trait] interface IB<[A] S> { }
             
-            sealed class IntSemigroup : ISemigroup<int> { }
-            sealed class IntMonoid : IMonoid<int> { }
+            sealed class IntA : IA<int> { }
+            sealed class IntB : IB<int> { }
             """);
     }
 
     [Fact]
-    public async Task EmitsError_WhenTraitRequiresAnotherTrait_AndItIsNotImplemented()
+    public async Task Error_WhenTraitRequiresAnotherTrait_AndItIsNotImplemented()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -144,33 +144,53 @@ public class TraitConstraintTests
             $$"""
             using Traits;
             
-            [Trait] interface ISemigroup<S> { }
-            [Trait] interface IMonoid<[Semigroup] S> { }
+            [Trait] interface IA<S> { }
+            [Trait] interface IB<[A] S> { }
             
-            sealed class IntMonoid : {{"IMonoid<int>"}} { }
+            sealed class IntB : {{"IB<int>"}} { }
             """);
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenTraitImpliesAnotherTrait()
+    public async Task Noop_WhenTraitImpliesAnotherTrait()
     {
         // lang=C#
         await Verify.Analyzer(
             """
+            using Traits;
+            
             class Test
             {
-                void Case<[Monoid] T>(T x)
+                void Case<[C] T>(T x)
                 {
-                    Semigroup.Dot(x, Monoid.Zero<T>());
+                    A.Do1(x);
+                    B.Do2(x);
+                    C.Do3(x);
                 }
             }
-            """,
-            Monoid.Definition(),
-            Semigroup.Definition());
+            
+            [Trait]
+            interface IA<S>
+            { 
+                void Do1(S self);
+            }
+            
+            [Trait]
+            interface IB<[A] S>
+            {
+                void Do2(S self);
+            }
+            
+            [Trait]
+            interface IC<[B] S>
+            {
+                void Do3(S self);
+            }
+            """);
     }
 
     [Fact]
-    public async Task EmitsError_WhenGenericClassRequiresTrait_AndItIsNotImplemented()
+    public async Task Error_WhenGenericClassRequiresTrait_AndItIsNotImplemented()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -192,7 +212,7 @@ public class TraitConstraintTests
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenGenericClassRequiresTrait_AndItIsImplemented()
+    public async Task Noop_WhenGenericClassRequiresTrait_AndItIsImplemented()
     {
         // lang=C#
         await Verify.Analyzer(

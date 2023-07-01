@@ -6,7 +6,7 @@ namespace Traits.Tests.TraitAnalyzerTests;
 public class TraitInterfaceTests
 {
     [Fact]
-    public async Task EmitsError_WhenNotGeneric()
+    public async Task Error_WhenNotGeneric()
     {
         // lang=C#
          await Verify.Analyzer(
@@ -23,7 +23,7 @@ public class TraitInterfaceTests
     }
 
     [Fact]
-    public async Task EmitsError_WhenExtendsOtherInterfaces()
+    public async Task Error_WhenExtendsOtherInterfaces()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -41,7 +41,7 @@ public class TraitInterfaceTests
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenCorrectlyDefined()
+    public async Task Noop_WhenCorrectlyDefined()
     {
         // lang=C#
         await Verify.Analyzer(
@@ -57,7 +57,7 @@ public class TraitInterfaceTests
     }
 
     [Fact]
-    public async Task EmitsNothing_WhenNotMarkedAsTrait()
+    public async Task Noop_WhenNotMarkedAsTrait()
     {
         // lang=C#
         await Verify.Analyzer(

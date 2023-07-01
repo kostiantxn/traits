@@ -202,32 +202,32 @@ public class TraitImplementationTests
             using Traits;
 
             [Trait]
-            public interface IHash<S>
+            interface IHash<S>
             {
                 int Of(S self);
             }
 
-            public sealed class ByteHash : IHash<byte>
+            sealed class ByteHash : IHash<byte>
             {
                 public int Of(byte self) => self;
             }
 
-            public sealed class ShortHash : IHash<short>
+            sealed class ShortHash : IHash<short>
             {
                 public int Of(short self) => self;
             }
 
-            public sealed class IntHash : IHash<int>
+            sealed class IntHash : IHash<int>
             {
                 public int Of(int self) => self;
             }
 
-            public sealed class ObjectHash : IHash<object>
+            sealed class ObjectHash : IHash<object>
             {
                 public int Of(object self) => self.GetHashCode();
             }
 
-            public sealed class StringHash : IHash<string>
+            sealed class StringHash : IHash<string>
             {
                 public int Of(string self) => self.GetHashCode();
             }

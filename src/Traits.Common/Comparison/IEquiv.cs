@@ -13,7 +13,7 @@
 ///     </list>
 /// </remarks>
 [Trait]
-public interface IEq<S>
+public interface IEquiv<S>
 {
     /// <summary>
     ///     Checks if <c>x == y</c>.

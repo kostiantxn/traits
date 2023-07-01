@@ -14,7 +14,7 @@
 ///     </list>
 /// </remarks>
 [Trait]
-public interface IOrd<[Eq] S>
+public interface IOrder<[Equiv] S>
 {
     /// <summary>
     ///     Compares <c>x</c> and <c>y</c>.
